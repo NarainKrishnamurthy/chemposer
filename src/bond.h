@@ -7,8 +7,8 @@ class Atom;
 
 class Bond {
  public:
- Bond(): _start(NULL), _end(NULL) {};
- Bond(Atom *a, Atom *b): _start(a), _end(b) {};
+ Bond(): _start(NULL), _end(NULL), _type(0) {};
+ Bond(Atom *a, Atom *b): _start(a), _end(b), _type(0) {};
  ~Bond() {}
 
  void setStart(Atom *a) { _start = a; }
@@ -22,12 +22,17 @@ class Bond {
  Atom *neighbor(Atom *a)
  { if (a == _start) return _end;
    else if (a == _end) return _start;
-   else return NULL;
+   return NULL;
  }
+
+ unsigned short type() { return _type; }
+ void setType(unsigned short t) { _type = t; }
 
  protected:
   Atom* _start;
   Atom* _end;
+
+  unsigned short _type; // 0 = unknown, 1, 2, 3, etc.
 };
 
 #endif

@@ -17,11 +17,18 @@ class Molecule {
  void addAtom(unsigned int element, double x, double y, double z)
  { Atom *a = new Atom(element, x, y, z); _atoms.push_back(a); }
  void addBond(Bond *bond) { _bonds.push_back(bond); }
+ void addBond(Atom *a, Atom *b)
+ { Bond *bond = new Bond(a, b); _bonds.push_back(bond); }
 
  unsigned int numberOfAtoms() { return _atoms.size(); }
  unsigned int numberOfBond() { return _bonds.size(); }
 
+ std::vector<Atom*> atoms() { return _atoms; }
+ std::vector<Bond*> bonds() { return _bonds; }
+
  void clear() { _atoms.clear(); _bonds.clear(); }
+
+ void perceiveBonds();
 
  protected:
   std::vector<Atom*> _atoms;

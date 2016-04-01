@@ -15,8 +15,7 @@ class Bond;
 class Atom {
  public:
  Atom(unsigned short element) : _atomicNum(element), _x(0.0), _y(0.0), _z(0.0) {};
- Atom(unsigned short e, double x, double y, double z) :
-  _atomicNum(e), _x(x), _y(y), _z(z) {};
+ Atom(unsigned short e, double x, double y, double z) : _atomicNum(e), _x(x), _y(y), _z(z) {};
   ~Atom() {}
 
   unsigned short atomicNum() { return _atomicNum; }
@@ -27,13 +26,35 @@ class Atom {
   double y() { return _y; }
   double z() { return _z; }
 
-  double distanceFrom(Atom a)
+  double distanceFrom(Atom &a)
   { return sqrt( SQUARE(_x - a._x) + SQUARE(_y - a._y) + SQUARE(_z - a._z) ); }
-  double distanceSqFrom(Atom a)
+  double distanceSqFrom(Atom &a)
   { return (SQUARE(_x - a._x) + SQUARE(_y - a._y) + SQUARE(_z - a._z)); }
 
   unsigned int numberOfBonds() { return _bonds.size(); }
   void addBond(Bond *bond) { _bonds.push_back(bond); }
+
+  bool isBonded(Atom &a);
+
+  double radius()
+  { // covalent radii for the elements
+    switch (_atomicNum) {
+    case 1:
+      return 0.31;
+      break;
+    case 6:
+      return 0.76;
+      break;
+    case 7:
+      return 0.71;
+      break;
+    case 8:
+      return 0.66;
+      break;
+    default:
+      return 1.0;
+    }
+  }
 
  protected:
   double _x;
