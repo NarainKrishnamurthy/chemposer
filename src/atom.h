@@ -34,7 +34,7 @@ class Atom {
   unsigned int numberOfBonds() { return _bonds.size(); }
   void addBond(Bond *bond) { _bonds.push_back(bond); }
 
-  bool isBonded(Atom &a);
+  bool isBonded(Atom *a);
 
   double radius()
   { // covalent radii for the elements

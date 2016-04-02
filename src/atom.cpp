@@ -3,14 +3,16 @@
 
 using namespace std;
 
-bool Atom::isBonded(Atom &a)
+bool Atom::isBonded(Atom *a)
 {
   bool bonded = false;
+  if (a == NULL)
+    return false;
 
   // loop through the bonds
   vector<Bond*>::iterator it;
   for (it = _bonds.begin(); it < _bonds.end(); ++it) {
-    if ((*it)->neighbor(this) == &a) {
+    if ((*it)->neighbor(this) == a) {
       bonded = true;
       break;
     }
