@@ -29,6 +29,7 @@ class Molecule {
  void clear() { _atoms.clear(); _bonds.clear(); }
 
  void perceiveBonds();
+ void doMatching();
 
  protected:
   std::vector<Atom*> _atoms;

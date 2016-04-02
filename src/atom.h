@@ -32,29 +32,12 @@ class Atom {
   { return (SQUARE(_x - a._x) + SQUARE(_y - a._y) + SQUARE(_z - a._z)); }
 
   unsigned int numberOfBonds() { return _bonds.size(); }
+  unsigned int numberOfDoubleBonds();
   void addBond(Bond *bond) { _bonds.push_back(bond); }
 
   bool isBonded(Atom *a);
 
-  double radius()
-  { // covalent radii for the elements
-    switch (_atomicNum) {
-    case 1:
-      return 0.31;
-      break;
-    case 6:
-      return 0.76;
-      break;
-    case 7:
-      return 0.71;
-      break;
-    case 8:
-      return 0.66;
-      break;
-    default:
-      return 1.0;
-    }
-  }
+  double radius();
 
  protected:
   double _x;

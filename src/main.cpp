@@ -30,8 +30,19 @@ int main (int argc, char *argv[])
 
     mol.perceiveBonds();
 
-    cout << " Molecule has " << mol.numberOfAtoms() << " atoms and " << mol.numberOfBonds() << " bonds." << endl;
-  }
+    cout << "Molecule has " << mol.numberOfAtoms() << " atoms and " << mol.numberOfBonds() << " bonds." << endl;
+
+    mol.doMatching();
+
+    std::vector<Atom*> atoms = mol.atoms();
+    unsigned int j = 0;
+    for (std::vector<Atom*>::iterator i = atoms.begin(); i < atoms.end(); ++i, ++j) {
+      if ((*i)->atomicNum() == 6 && (*i)->numberOfDoubleBonds() != 1) {
+        cout << " failed matching on atom " << j << endl;
+        break;
+      }
+    } // end check loop
+  } // end (loop through command-line args)
 
   return 0;
 }

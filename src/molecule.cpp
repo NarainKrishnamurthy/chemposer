@@ -70,3 +70,13 @@ void Molecule::perceiveBonds() {
     } // end inner loop
   } // end outer loop
 } // end perceiveBonds
+
+void Molecule::doMatching() {
+
+  // loop through the bonds
+  vector<Bond*>::iterator it;
+  for (it = _bonds.begin(); it < _bonds.end(); ++it) {
+    // do something here
+  } // end bond loop
+
+}
