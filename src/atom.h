@@ -14,12 +14,14 @@ class Bond;
 
 class Atom {
  public:
- Atom(unsigned short element) : _atomicNum(element), _x(0.0), _y(0.0), _z(0.0) {};
- Atom(unsigned short e, double x, double y, double z) : _atomicNum(e), _x(x), _y(y), _z(z) {};
+ Atom(unsigned short element) : _atomicNum(element), _x(0.0), _y(0.0), _z(0.0), _id(0) {};
+ Atom(unsigned short e, double x, double y, double z, unsigned int id) : _atomicNum(e), _x(x), _y(y), _z(z), _id(id) {};
   ~Atom() {}
 
   unsigned short atomicNum() { return _atomicNum; }
   void setAtomicNum(unsigned short element) { _atomicNum = element; }
+
+  char* elementSymbol();
 
   void setXYZ(double x, double y, double z) { _x = x; _y = y; _z = z; }
   double x() { return _x; }
@@ -39,11 +41,15 @@ class Atom {
 
   double radius();
 
+  unsigned int id() { return _id; }
+  void setId(unsigned int id) { _id = id; }
+
  protected:
   double _x;
   double _y;
   double _z;
   unsigned short _atomicNum;
+  unsigned int _id;
 
   std::vector<Bond*> _bonds;
 };

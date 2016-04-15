@@ -12,6 +12,7 @@
 #include "bond.h"
 
 bool readXYZ(Molecule &mol, const char* filename);
+bool writeSDF(Molecule &mol, const char* filename);
 
 using namespace std;
 
@@ -42,6 +43,19 @@ int main (int argc, char *argv[])
         break;
       }
     } // end check loop
+
+    // write an SD output
+    char *filename = argv[a];
+    // change extension
+    char *pExt = strrchr(filename, '.');
+    if (pExt != NULL)
+      strcpy(pExt, ".sdf");
+    else
+      strcat(filename, ".sdf");
+
+    if (!writeSDF(mol, filename))
+      cout << "Cannot write the SDF file" << endl;
+
   } // end (loop through command-line args)
 
   return 0;

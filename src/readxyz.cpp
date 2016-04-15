@@ -14,8 +14,10 @@ bool readXYZ(Molecule &mol, const char* filename)
   ifstream xyzFile;
   xyzFile.open(filename);
 
-  if (!xyzFile.is_open())
+  if (!xyzFile.is_open()) {
     cout << "Can't open file " << filename << endl;
+    return false;
+  }
 
   // file opens OK
   mol.clear();

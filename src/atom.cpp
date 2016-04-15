@@ -54,3 +54,27 @@ double Atom::radius()
     return 1.0;
   }
 }
+
+char* Atom::elementSymbol()
+{
+  char *sym = new char[4];
+
+  switch (_atomicNum) {
+  case 1:
+    sym = "H";
+    break;
+  case 6:
+    sym = "C";
+    break;
+  case 7:
+    sym = "N";
+    break;
+  case 8:
+    sym = "O";
+    break;
+  default:
+    sym = "C";
+  }
+
+  return sym;
+}
