@@ -21,8 +21,17 @@ Several target molecules are included through GitHub, ranging in size from 6-10 
 
 Please contact me (geoffh@pitt.edu) if you have any questions about this.
 
-Deliverables:
+##Deliverables:
 
 - You can implement the matching algorithm in any language, although C++ is strongly preferred.
 - The implementation should be highly parallel. OpenMP is strongly preferred.
 - You must be willing to release your final code under a GPLv2, LGPL, or BSD (preferred) open source license
+
+## Testing
+
+The src/ code uses CMake and a C++ compiler.
+- mkdir build
+- cd build
+- cmake ..
+- make -j3
+- ./pmatch ../molecules/*.xyz
