@@ -1,0 +1,34 @@
+## Variables
+
+SRC := src
+SOURCES := $(wildcard src/*.cpp)
+OBJS    := $(pathsubst src/%, build/%, $(SOURCES:.cpp=.o))
+CC  = g++
+CFLAGS = -Wall -Wextra -O2 -std=c++11 -lm
+EXEC_NAME = chemposer
+
+
+## Targets
+
+-include $(OBJS: .o=.d)
+
+
+all: # $(EXEC_NAM::qq
+k
+n
+
+
+
+build/%.o: $(SRC)/%.c build
+	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) -MM $(CFLAGS) $< > $*.d
+
+build:
+	mkdir -p $@
+
+clean:
+	rm -rf $(EXEC_NAME) build
+
+
+
+ 
