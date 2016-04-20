@@ -1,5 +1,5 @@
 # Parallel Bond Order Assignment by Graph Theory
-n chemistry and molecular biology, one often of a molecule as a graph, with atoms as the vertices and bonds as the bidirectional edges. Usually, we prefer to visualize different bond types: single, double, triple, etc. as a way of understanding their reactivity.
+In chemistry and molecular biology, one often of a molecule as a graph, with atoms as the vertices and bonds as the bidirectional edges. Usually, we prefer to visualize different bond types: single, double, triple, etc. as a way of understanding their reactivity.
 
 ![matching](/images/matching.png)
 
