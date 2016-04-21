@@ -31,6 +31,8 @@ int main (int argc, char *argv[])
     if (!readXYZ(mol, argv[a]))
       cout << "Cannot read the XYZ file" << endl;
 
+    mol.initializeGraph();
+
     mol.perceiveBonds();
 
     cout << "Molecule has " << mol.numberOfAtoms() << " atoms and " << mol.numberOfBonds() << " bonds." << endl;

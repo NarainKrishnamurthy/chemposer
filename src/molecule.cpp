@@ -33,6 +33,7 @@ void Molecule::perceiveBonds() {
     maxrad = std::max(rad[j],maxrad);
   }
 
+  int numedges = 0;
   int idx1, idx2;
   double d2,cutoff,zd;
   for (unsigned int j = 0; j < max ; ++j) {
@@ -63,12 +64,15 @@ void Molecule::perceiveBonds() {
       if (d2 < 0.16) // 0.4 * 0.4 = 0.16
         continue; // too close
 
-      if (atom->isBonded(nbr))
-        continue; // already handled
 
-      addBond(atom,nbr,1);
+      graph[atom->id()].push_back(nbr->id());
+      graph[nbr->id()].push_back(atom->id());
+      numedges++;
     } // end inner loop
   } // end outer loop
+  setNumBonds(numedges);
+  printGraph();
+
 } // end perceiveBonds
 
 void Molecule::doMatching() {
@@ -80,3 +84,41 @@ void Molecule::doMatching() {
   } // end bond loop
 
 }
+
+
+void Molecule::printMolecule(){
+
+ for(auto it= _atoms.begin(); it != _atoms.end(); ++it){
+    printf(" %d \n", (*it)->id());
+
+  }
+
+}
+
+void Molecule::printGraph(){
+  int count = 0;
+
+  for(auto it= graph.begin(); it != graph.end(); ++it){
+    printf(" %d ---->  ", count);
+    for(auto f= it->begin(); f != it->end(); ++f){
+      printf(" %d ", *f);
+
+    }
+    printf("\n");
+    count++;
+  }
+  printf("%d\n",numBonds);
+
+}
+
+
+void Molecule::initializeGraph(){
+
+  graph = vector<vector<int>>(numberOfAtoms());
+  
+  for(int i=0; i<numberOfAtoms(); ++i){
+    graph[i] =  vector<int>(0);
+  }
+  
+}
+

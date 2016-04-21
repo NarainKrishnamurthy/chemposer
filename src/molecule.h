@@ -21,19 +21,29 @@ class Molecule {
  { Bond *bond = new Bond(a, b); bond->setType(type); _bonds.push_back(bond); }
 
  unsigned int numberOfAtoms() { return _atoms.size(); }
- unsigned int numberOfBonds() { return _bonds.size(); }
+ unsigned int numberOfBonds() { return numBonds; }
 
  std::vector<Atom*> atoms() { return _atoms; }
  std::vector<Bond*> bonds() { return _bonds; }
 
  void clear() { _atoms.clear(); _bonds.clear(); }
+ 
+ void setNumBonds(unsigned num){
+ 	numBonds = num;
+ }
 
  void perceiveBonds();
  void doMatching();
+ void printMolecule();
+ void printGraph();
+ void initializeGraph();
 
  protected:
   std::vector<Atom*> _atoms;
   std::vector<Bond*> _bonds;
+  unsigned int numBonds;
+  std::vector<std::vector<int>> graph;
+
 };
 
 #endif

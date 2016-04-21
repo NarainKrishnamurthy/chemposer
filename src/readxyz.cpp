@@ -62,5 +62,6 @@ bool readXYZ(Molecule &mol, const char* filename)
   // done
 
   // success if there was actually something in the file
+  
   return (mol.numberOfAtoms() > 0);
 }
