@@ -3,23 +3,25 @@
 SRC := src
 SOURCES := $(wildcard src/*.cpp)
 OBJS    := $(patsubst src/%,build/%,$(SOURCES:.cpp=.o))
-CC  = g++
-CFLAGS = -Wall -Wextra -O2 -std=c++11
+CC  = clang-omp
+CFLAGS = -Wall -Wextra -O2 -std=c++11 -fopenmp
 EXEC_NAME = chemposer
 
 
 ## Targets
 
+.PHONY: dirs clean
+
 all: $(EXEC_NAME)
 
-$(EXEC_NAME): $(SOURCES) $(OBJS)
-	$(CC) $(CFLAGS) -o $(EXEC_NAME) $(OBJS)
+$(EXEC_NAME): dirs $(OBJS)
+	$(CC) $(CFLAGS) -o $(EXEC_NAME) $(OBJS) -lc++
 
-build/%.o: $(SRC)/%.cpp build
+build/%.o: $(SRC)/%.cpp
 	$(CC) $(CFLAGS) -c $< -o $@
-
-build:
-	mkdir -p $@
+			
+dirs:
+	mkdir -p build
 
 clean:
 	rm -rf $(EXEC_NAME) build
