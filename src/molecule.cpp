@@ -36,9 +36,12 @@ void Molecule::perceiveBonds() {
   int numedges = 0;
   int idx1, idx2;
   double d2,cutoff,zd;
+
+
   for (unsigned int j = 0; j < max ; ++j) {
     double maxcutoff = SQUARE(rad[j]+maxrad+0.45);
     atom = zsortedAtoms[j].first;
+
     for (unsigned int k = j + 1 ; k < max ; k++ ) {
       nbr = zsortedAtoms[k].first;
 
@@ -65,8 +68,8 @@ void Molecule::perceiveBonds() {
         continue; // too close
 
 
-      graph[atom->id()].push_back(nbr->id());
-      graph[nbr->id()].push_back(atom->id());
+      graph[atom->id()][nbr->id()] = 1;
+      graph[nbr->id()][atom->id()] = 1;
       numedges++;
     } // end inner loop
   } // end outer loop
@@ -116,8 +119,9 @@ void Molecule::initializeGraph(){
 
   graph = vector<vector<int>>(numberOfAtoms());
   
+  #pragma omp parallel for
   for(int i=0; i<numberOfAtoms(); ++i){
-    graph[i] =  vector<int>(0);
+    graph[i] =  vector<int>(numberOfAtoms());
   }
   
 }
