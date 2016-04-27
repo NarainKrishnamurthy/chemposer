@@ -78,6 +78,70 @@ void Molecule::perceiveBonds() {
 
 } // end perceiveBonds
 
+
+int determinant(N, A){
+    int det = 1;
+    for (int i=0; i<N; i++){
+        int aii = A[i][i];
+        det = det*aii;
+        //#pragma omp parallel for
+        for (int j=i+1; j<N; j++){
+            int z = A[j][i]/aii;
+            for (int k=i+1; k<N; k++){
+                A[j][k] = A[j][k] - z*A[i][k];
+            }
+
+        }
+    }
+    return det;
+}
+
+/* inverse - Computes the inverse of an NxN matrix  A in place
+*/
+void inverse(N, C){
+    int n = N;
+    int j = 0;
+    while (j < N) {
+        int k = 0;
+        //IF... add a non-zero row to row j
+        if (C[j][j] == 0){
+            //Find the non-zero k
+            //#pragma omp parallel for
+            for (int i=0; i<N; i++){
+                if (C[k][j]!=0){
+                    k = i;
+                    break;
+                }
+            }
+            //Add the row k to row j
+            //#pragma omp parallel for
+            for (int i=j; i<N+j; i++){
+                C[j][i] = C[j][i] + C[k][i];
+            }
+        }
+        float ajj = C[j][j];
+        
+        //Divide out ajj
+        //#pragma omp parallel for
+        for (int i=j; i<N+j; i++){
+            C[j][i] = C[j][i]/ajj;
+        }
+
+        //Subtract row j multiplied by appropriate constant from other rows
+        for (int i=0; i<N;i++){
+            if (i!=j){
+                float aij = C[i][j];
+                for (int r=j; r<N+j; r++){
+                    C[i][r] = C[i][r] - aij*C[j][r-j];
+                }
+            }
+        }
+        j++;
+    }
+}
+
+
+
 void Molecule::doMatching() {
 
   // loop through the bonds
