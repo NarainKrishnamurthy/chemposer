@@ -37,12 +37,16 @@ class Molecule {
  void printMolecule();
  void printGraph();
  void initializeGraph();
+ void inverse();
+// void determinant(int N);
+ void printAugMatrix();
 
  protected:
   std::vector<Atom*> _atoms;
   std::vector<Bond*> _bonds;
   unsigned int numBonds;
-  std::vector<std::vector<int>> graph;
+  std::vector<std::vector<float>> graph;
+  std::vector<std::vector<float>> augC;
 
 };
 

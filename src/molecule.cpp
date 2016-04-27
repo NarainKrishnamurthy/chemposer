@@ -67,17 +67,22 @@ void Molecule::perceiveBonds() {
       if (d2 < 0.16) // 0.4 * 0.4 = 0.16
         continue; // too close
 
-
+      unsigned int n = numberOfAtoms();
       graph[atom->id()][nbr->id()] = 1;
       graph[nbr->id()][atom->id()] = 1;
+
+      augC[atom->id()][n+nbr->id()] = 1;
+      augC[nbr->id()][n+atom->id()] = 1;
+
       numedges++;
     } // end inner loop
   } // end outer loop
   setNumBonds(numedges);
-  printGraph();
+  //printGraph();
 
 } // end perceiveBonds
 
+/*
 
 int determinant(N, A){
     int det = 1;
@@ -96,19 +101,21 @@ int determinant(N, A){
     return det;
 }
 
+*/
+
 /* inverse - Computes the inverse of an NxN matrix  A in place
 */
-void inverse(N, C){
-    int n = N;
+void  Molecule::inverse(){
+    int N = numberOfAtoms();
     int j = 0;
     while (j < N) {
         int k = 0;
         //IF... add a non-zero row to row j
-        if (C[j][j] == 0){
+        if (augC[j][j] == 0){
             //Find the non-zero k
             //#pragma omp parallel for
             for (int i=0; i<N; i++){
-                if (C[k][j]!=0){
+                if (augC[k][j]!=0){
                     k = i;
                     break;
                 }
@@ -116,23 +123,23 @@ void inverse(N, C){
             //Add the row k to row j
             //#pragma omp parallel for
             for (int i=j; i<N+j; i++){
-                C[j][i] = C[j][i] + C[k][i];
+                augC[j][i] = augC[j][i] + augC[k][i];
             }
         }
-        float ajj = C[j][j];
+        float ajj = augC[j][j];
         
         //Divide out ajj
         //#pragma omp parallel for
         for (int i=j; i<N+j; i++){
-            C[j][i] = C[j][i]/ajj;
+            augC[j][i] = augC[j][i]/ajj;
         }
 
         //Subtract row j multiplied by appropriate constant from other rows
         for (int i=0; i<N;i++){
             if (i!=j){
-                float aij = C[i][j];
+                float aij = augC[i][j];
                 for (int r=j; r<N+j; r++){
-                    C[i][r] = C[i][r] - aij*C[j][r-j];
+                    augC[i][r] = augC[i][r] - aij*augC[j][r-j];
                 }
             }
         }
@@ -153,6 +160,7 @@ void Molecule::doMatching() {
 }
 
 
+
 void Molecule::printMolecule(){
 
  for(auto it= _atoms.begin(); it != _atoms.end(); ++it){
@@ -168,7 +176,7 @@ void Molecule::printGraph(){
   for(auto it= graph.begin(); it != graph.end(); ++it){
     printf(" %d ---->  ", count);
     for(auto f= it->begin(); f != it->end(); ++f){
-      printf(" %d ", *f);
+      printf(" %f ", *f);
 
     }
     printf("\n");
@@ -179,14 +187,42 @@ void Molecule::printGraph(){
 }
 
 
+void Molecule::printAugMatrix(){
+  int count = 0;
+
+  for(auto it= augC.begin(); it != augC.end(); ++it){
+    printf(" %d ---->  ", count);
+    for(auto f= it->begin(); f != it->end(); ++f){
+      printf(" %.1lf ", *f);
+
+    }
+    printf("\n");
+    count++;
+  }
+ 
+
+}
+
 void Molecule::initializeGraph(){
 
-  graph = vector<vector<int>>(numberOfAtoms());
-  
-  #pragma omp parallel for
+  graph = vector<vector<float>>(numberOfAtoms());
+  augC = vector<vector<float>>(numberOfAtoms());
+
   for(int i=0; i<numberOfAtoms(); ++i){
-    graph[i] =  vector<int>(numberOfAtoms());
+    graph[i] =  vector<float>(numberOfAtoms());
+    augC[i] = vector<float>(2*numberOfAtoms());
   }
+
+  for (int j=0; j< numberOfAtoms(); j++){
+    for (int k=0; k<numberOfAtoms(); k++){
+      if (j==k){
+        augC[j][k] = 1;
+      }
+
+    }
+
+  }
+
   
 }
 

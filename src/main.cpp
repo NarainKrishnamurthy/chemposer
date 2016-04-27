@@ -32,11 +32,20 @@ int main (int argc, char *argv[])
       cout << "Cannot read the XYZ file" << endl;
 
     mol.initializeGraph();
-
+  
     mol.perceiveBonds();
+
+    //mol.printAugMatrix();
 
     cout << "Molecule has " << mol.numberOfAtoms() << " atoms and " << mol.numberOfBonds() << " bonds." << endl;
 
+    mol.inverse();
+
+    printf(" \n\n Augmented Matrix after taking inverse \n\n");
+
+    mol.printAugMatrix();
+
+    //mol.printGraph();
     mol.doMatching();
 
     std::vector<Atom*> atoms = mol.atoms();
