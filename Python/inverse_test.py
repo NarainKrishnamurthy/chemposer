@@ -48,35 +48,32 @@ def generate_matrix(N,a,b):
 def my_inv_test(A, N, my_inv, err):
     a = np.array(A)
     I = a.dot(np.array(my_inv))
-    if (np.array(I) != np.identity(N)).all():
-        print "INV ERROR"
-        return
-    '''for i in xrange(0,N):
+
+    error = False
+    for i in xrange(0,N):
         for j in xrange(0,N):
             if j == i:
                 if abs(I[i][j] - 1) > err:
                     print "ERROR for 1 - (i,j):", i, j
                     print I[i][j]
-                    return
+                    error = True
                     
             else:
                 if abs(I[i][j] - 0) > err:
                     print "ERROR for 0 - (i,j):", i, j
                     print I[i][j]
-                    return'''
-                    
-    print "INV TEST SUCCEEDED"
+                    error = True
+
+    if not error:
+        print "INV TEST SUCCEEDED"
     return I
 
-def test(num_tests, N, a,b):
+def test(num_tests, N, a, b):
     for i in xrange(0, num_tests):
         A = generate_matrix(N,a,b)
         if det(np.array(A)) == 0:
             print "0 DETERMINANT"
             continue
-        
-
-        np_A = np.array(A)
 
         #Compute C
         C = [[] for i in xrange(0, len(A))]
@@ -91,10 +88,14 @@ def test(num_tests, N, a,b):
 
         my_inv = inverse(len(A), C)
         my_inv_test(A,N,my_inv, 10**-3)
+
+        #print A
+        #print my_inv
+
         #np_inv = numpy_inv(np_A)
         #inv_test(my_inv, np_inv, len(A), 10**-6)
 
 
-test(10,2,0,1)
+test(20,70,0,150**2)
 
 
