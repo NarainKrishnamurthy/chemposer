@@ -1,6 +1,7 @@
 // Simple Molecule class
 
 #include "molecule.h"
+#include <random>
 
 using namespace std;
 
@@ -37,6 +38,10 @@ void Molecule::perceiveBonds() {
   int idx1, idx2;
   double d2,cutoff,zd;
 
+  int n = numberOfAtoms();
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<> dis(1, n*n);
 
   for (unsigned int j = 0; j < max ; ++j) {
     double maxcutoff = SQUARE(rad[j]+maxrad+0.45);
@@ -67,12 +72,16 @@ void Molecule::perceiveBonds() {
       if (d2 < 0.16) // 0.4 * 0.4 = 0.16
         continue; // too close
 
-      unsigned int n = numberOfAtoms();
-      graph[atom->id()][nbr->id()] = 1;
-      graph[nbr->id()][atom->id()] = 1;
+      
+      float val = (float) dis(gen);
+      if (atom->id() > nbr->id()){
+         val = -1.0 * val;
+      } 
+      graph[atom->id()][nbr->id()] = val;
+      graph[nbr->id()][atom->id()] = -1.0*val;
 
-      augC[atom->id()][n+nbr->id()] = 1;
-      augC[nbr->id()][n+atom->id()] = 1;
+      augC[atom->id()][nbr->id()] = val;
+      augC[nbr->id()][atom->id()] = -1.0*val;
 
       numedges++;
     } // end inner loop
@@ -205,20 +214,20 @@ void Molecule::printAugMatrix(){
 
 void Molecule::initializeGraph(){
 
-  graph = vector<vector<float>>(numberOfAtoms());
-  augC = vector<vector<float>>(numberOfAtoms());
+  int N = numberOfAtoms();
+  graph = vector<vector<float>>(N);
+  augC = vector<vector<float>>(N);
 
-  for(int i=0; i<numberOfAtoms(); ++i){
-    graph[i] =  vector<float>(numberOfAtoms());
-    augC[i] = vector<float>(2*numberOfAtoms());
+  for(int i=0; i<N; ++i){
+    graph[i] =  vector<float>(N);
+    augC[i] = vector<float>(2*N);
   }
 
-  for (int j=0; j< numberOfAtoms(); j++){
-    for (int k=0; k<numberOfAtoms(); k++){
+  for (int j=0; j< N; j++){
+    for (int k=0; k<N; k++){
       if (j==k){
-        augC[j][k] = 1;
+        augC[j][k+N] = 1;
       }
-
     }
 
   }
