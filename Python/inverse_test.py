@@ -68,6 +68,18 @@ def my_inv_test(A, N, my_inv, err):
         print "INV TEST SUCCEEDED"
     return I
 
+def augment(A,N):
+    C = [[] for i in xrange(0, len(A))]
+    for i in xrange(0, len(A)):
+        for j in xrange(0, len(A)*2):
+            if j<len(A):
+                C[i].append(A[i][j])
+            elif j == len(A) + i:
+                C[i].append(1.)
+            else:
+                C[i].append(0.)
+    return C
+
 def test(num_tests, N, a, b):
     for i in xrange(0, num_tests):
         A = generate_matrix(N,a,b)
@@ -75,27 +87,9 @@ def test(num_tests, N, a, b):
             print "0 DETERMINANT"
             continue
 
-        #Compute C
-        C = [[] for i in xrange(0, len(A))]
-        for i in xrange(0, len(A)):
-            for j in xrange(0, len(A)*2):
-                if j<len(A):
-                    C[i].append(A[i][j])
-                elif j == len(A) + i:
-                    C[i].append(1.)
-                else:
-                    C[i].append(0.)
+        C = augment(A,N)
 
         my_inv = inverse(len(A), C)
         my_inv_test(A,N,my_inv, 10**-3)
-
-        #print A
-        #print my_inv
-
-        #np_inv = numpy_inv(np_A)
-        #inv_test(my_inv, np_inv, len(A), 10**-6)
-
-
-test(20,70,0,150**2)
 
 
