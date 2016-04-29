@@ -124,11 +124,11 @@ void  Molecule::inverse(std::map<int, int> *excl_rows, std::map<int, int> *excl_
       j += 1;
       continue;
     }
-    if (augC[j][j] == 0){
+    if (augC[j][j] == 0.0){
       int k = -1;
 
       for(int new_col=j+1; new_col<N; new_col++){
-        if (excl_cols->count(new_col) == 0 && augC[new_col][j] != 0){
+        if (excl_cols->count(new_col) == 0 && augC[new_col][j] != 0.0){
           k = new_col;
           break;
         }
@@ -147,7 +147,7 @@ void  Molecule::inverse(std::map<int, int> *excl_rows, std::map<int, int> *excl_
       
     }
 
-    int ajj = augC[j][j];
+    float ajj = augC[j][j];
 
     for(int row=0; row<2*N; row++){
       if (excl_rows->count(row) == 0)
@@ -157,7 +157,7 @@ void  Molecule::inverse(std::map<int, int> *excl_rows, std::map<int, int> *excl_
     for(int col=0; col < N; col++){
       if ((col !=j) && excl_cols->count(col)==0){
 
-        int aij = augC[col][j];
+        float aij = augC[col][j];
 
         for(int row=0;row<2*N;row++){
           if (excl_rows->count(row) ==0){
