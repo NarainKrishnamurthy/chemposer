@@ -35,11 +35,23 @@ int main (int argc, char *argv[])
   
     mol.perceiveBonds();
 
-    //mol.printAugMatrix();
+    printf(" \n\n Augmented Matrix before taking the inverse \n\n");
+
+    mol.printAugMatrix();
 
     cout << "Molecule has " << mol.numberOfAtoms() << " atoms and " << mol.numberOfBonds() << " bonds." << endl;
 
-    mol.inverse();
+    std::map<int, int> excl_cols;
+
+    std::map<int, int> excl_rows;
+/*
+    for(int i=0; i<mol.numberOfAtoms(); i++){
+      excl_rows.insert(std::pair<int,int>(i,1));
+      excl_cols.insert(std::pair<int,int>(i,1));
+  
+    }
+*/
+    mol.inverse(&excl_cols, &excl_rows);
 
     printf(" \n\n Augmented Matrix after taking inverse \n\n");
 
