@@ -9,13 +9,13 @@ def determinant(A,N):
         #swap rows
         if A[rc][rc] == 0:
             #print "swapping rows"
-            new_col = -1
+            new_col = None
             for i in xrange(rc+1,N):
                 if A[i][rc] != 0:
                     new_col = i
                     break
 
-            if new_col != -1:
+            if new_col != None:
                 det = det * -1.
                 for i in xrange(0,N):
                     temp = A[rc][i]
@@ -63,5 +63,5 @@ def specific_test():
     print determinant(A, len(A))
     print det(np_A)
 
-test(1000,40,0,9,10**-6)         
+#test(1000,40,0,2000,10**-15)         
 
