@@ -122,7 +122,7 @@ void  Molecule::determinant(float *err){
 
     for(int row_below=rc+1; row_below<N; row_below++){
       if (abs(graph[row_below][rc]) > *err){
-        int val = graph[row_below][rc]/graph[rc][rc];
+        float val = graph[row_below][rc]/graph[rc][rc];
         for(int i=0; i<N; i++)
           graph[row_below][i] -= val*graph[rc][i];
       }
@@ -240,6 +240,11 @@ void Molecule::printGraph(){
   }
   printf("%d\n",numBonds);
 
+}
+
+
+void Molecule::printDeterminant(){
+  printf("The determinant is = %f\n", det);
 }
 
 

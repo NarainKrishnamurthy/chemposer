@@ -43,6 +43,7 @@ class Molecule {
  void determinant(float *err);
 // void determinant(int N);
  void printAugMatrix();
+ void printDeterminant();
 
  protected:
   std::vector<Atom*> _atoms;
