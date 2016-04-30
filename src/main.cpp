@@ -44,6 +44,8 @@ int main (int argc, char *argv[])
     std::map<int, int> excl_cols;
 
     std::map<int, int> excl_rows;
+
+    float err = 0.000001;
 /*
     for(int i=0; i<mol.numberOfAtoms(); i++){
       excl_rows.insert(std::pair<int,int>(i,1));
@@ -51,7 +53,7 @@ int main (int argc, char *argv[])
   
     }
 */
-    mol.inverse(&excl_cols, &excl_rows);
+    mol.inverse(&excl_cols, &excl_rows, &err);
 
     printf(" \n\n Augmented Matrix after taking inverse \n\n");
 

@@ -91,30 +91,60 @@ void Molecule::perceiveBonds() {
 
 } // end perceiveBonds
 
-/*
 
-int determinant(N, A){
-    int det = 1;
-    for (int i=0; i<N; i++){
-        int aii = A[i][i];
-        det = det*aii;
-        //#pragma omp parallel for
-        for (int j=i+1; j<N; j++){
-            int z = A[j][i]/aii;
-            for (int k=i+1; k<N; k++){
-                A[j][k] = A[j][k] - z*A[i][k];
-            }
+void  Molecule::determinant(float *err){
 
+  float det = 1.0;
+
+  int N = numberOfAtoms();
+
+  for(int rc=0; rc<N; rc++){
+
+    if (abs(graph[rc][rc]) < *err){
+      int new_col = -1;
+      for(int i=rc+1; i < N; i++){
+        if (abs(graph[i][rc]) > *err){
+          new_col = i;
+          break;
         }
+      }
+
+      if (new_col != -1){
+        det = det * (-1);
+        for(int i=0;i<N; i++){
+          float temp = graph[rc][i];
+          graph[rc][i] = graph[new_col][i];
+          graph[new_col][i] = temp;
+        }
+      }
+
     }
-    return det;
+
+    for(int row_below=rc+1; row_below<N; row_below++){
+      if (abs(graph[row_below][rc]) > *err){
+        int val = graph[row_below][rc]/graph[rc][rc];
+        for(int i=0; i<N; i++)
+          graph[row_below][i] -= val*graph[rc][i];
+      }
+
+    }
+
+  }
+
+  for(int i=0; i<N; i++)
+    det *= graph[i][i];
+
 }
 
-*/
+
+
+
+
+
 
 /* inverse - Computes the inverse of an NxN matrix  A in place
 */
-void  Molecule::inverse(std::map<int, int> *excl_rows, std::map<int, int> *excl_cols){
+void  Molecule::inverse(std::map<int, int> *excl_rows, std::map<int, int> *excl_cols, float *err){
   int N = numberOfAtoms();
   int j = 0;
 
@@ -124,11 +154,11 @@ void  Molecule::inverse(std::map<int, int> *excl_rows, std::map<int, int> *excl_
       j += 1;
       continue;
     }
-    if (augC[j][j] == 0.0){
+    if (std::abs(augC[j][j]) < *err){
       int k = -1;
 
       for(int new_col=j+1; new_col<N; new_col++){
-        if (excl_cols->count(new_col) == 0 && augC[new_col][j] != 0.0){
+        if (excl_cols->count(new_col) == 0 && std::abs(augC[new_col][j]) > *err){
           k = new_col;
           break;
         }

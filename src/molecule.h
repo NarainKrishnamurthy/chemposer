@@ -4,6 +4,7 @@
 #define MOLECULE_H
 
 #include <vector>
+#include <cmath> 
 
 #include "atom.h"
 #include "bond.h"
@@ -38,7 +39,8 @@ class Molecule {
  void printMolecule();
  void printGraph();
  void initializeGraph();
- void inverse(std::map<int, int> *a, std::map<int, int> *b);
+ void inverse(std::map<int, int> *a, std::map<int, int> *b, float *err);
+ void determinant(float *err);
 // void determinant(int N);
  void printAugMatrix();
 
@@ -48,6 +50,7 @@ class Molecule {
   unsigned int numBonds;
   std::vector<std::vector<float>> graph;
   std::vector<std::vector<float>> augC;
+  float det;
 
 };
 
