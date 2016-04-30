@@ -114,48 +114,66 @@ int determinant(N, A){
 
 /* inverse - Computes the inverse of an NxN matrix  A in place
 */
-void  Molecule::inverse(){
-    int N = numberOfAtoms();
-    int j = 0;
-    while (j < N) {
-        int k = 0;
-        //IF... add a non-zero row to row j
-        if (augC[j][j] == 0){
-            //Find the non-zero k
-            //#pragma omp parallel for
-            for (int i=0; i<N; i++){
-                if (augC[k][j]!=0){
-                    k = i;
-                    break;
-                }
-            }
-            //Add the row k to row j
-            //#pragma omp parallel for
-            for (int i=j; i<N+j; i++){
-                augC[j][i] = augC[j][i] + augC[k][i];
-            }
-        }
-        float ajj = augC[j][j];
-        
-        //Divide out ajj
-        //#pragma omp parallel for
-        for (int i=j; i<N+j; i++){
-            augC[j][i] = augC[j][i]/ajj;
-        }
+void  Molecule::inverse(std::map<int, int> *excl_rows, std::map<int, int> *excl_cols){
+  int N = numberOfAtoms();
+  int j = 0;
 
-        //Subtract row j multiplied by appropriate constant from other rows
-        for (int i=0; i<N;i++){
-            if (i!=j){
-                float aij = augC[i][j];
-                for (int r=j; r<N+j; r++){
-                    augC[i][r] = augC[i][r] - aij*augC[j][r-j];
-                }
-            }
-        }
-        j++;
+  while (j<N){
+
+    if (excl_cols->count(j)>0){
+      j += 1;
+      continue;
     }
-}
+    if (augC[j][j] == 0.0){
+      int k = -1;
 
+      for(int new_col=j+1; new_col<N; new_col++){
+        if (excl_cols->count(new_col) == 0 && augC[new_col][j] != 0.0){
+          k = new_col;
+          break;
+        }
+      }
+
+      if (k==-1){
+        printf("k is -1 \n");
+      }
+
+      for(int row=0; row<2*N; row++){
+        if (excl_rows->count(row) == 0){
+          augC[j][row] += augC[k][row];
+        }
+      }
+
+      
+    }
+
+    float ajj = augC[j][j];
+
+    for(int row=0; row<2*N; row++){
+      if (excl_rows->count(row) == 0)
+        augC[j][row] /= ajj;
+    }
+
+    for(int col=0; col < N; col++){
+      if ((col !=j) && excl_cols->count(col)==0){
+
+        float aij = augC[col][j];
+
+        for(int row=0;row<2*N;row++){
+          if (excl_rows->count(row) ==0){
+            augC[col][row] = augC[col][row] - aij*augC[j][row];
+          }
+        }
+      }
+
+
+    }
+
+    j++;
+
+  }
+
+}
 
 
 void Molecule::doMatching() {
@@ -167,7 +185,6 @@ void Molecule::doMatching() {
   } // end bond loop
 
 }
-
 
 
 void Molecule::printMolecule(){

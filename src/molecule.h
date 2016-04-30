@@ -7,6 +7,7 @@
 
 #include "atom.h"
 #include "bond.h"
+#include <map>
 
 class Molecule {
  public:
@@ -37,7 +38,7 @@ class Molecule {
  void printMolecule();
  void printGraph();
  void initializeGraph();
- void inverse();
+ void inverse(std::map<int, int> *a, std::map<int, int> *b);
 // void determinant(int N);
  void printAugMatrix();
 
