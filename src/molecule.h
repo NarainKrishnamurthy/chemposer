@@ -39,11 +39,15 @@ class Molecule {
  void printMolecule();
  void printGraph();
  void initializeGraph();
- void inverse(std::map<int, int> *a, std::map<int, int> *b, float *err);
- void determinant(float *err);
-// void determinant(int N);
+ void inverse(std::vector<std::vector<float>> *C, int N, std::map<int, int> excl, float err);
+ float determinant(std::vector<std::vector<float>> A, int N, float err);
+ void printMatrix(std::vector<std::vector<float>> A);
  void printAugMatrix();
  void printDeterminant();
+ std::vector<std::vector<float>> copy_graph();
+ std::vector<std::vector<float>> copy_augC();
+ std::vector<std::tuple<float, float>> matching(float err);
+
 
  protected:
   std::vector<Atom*> _atoms;

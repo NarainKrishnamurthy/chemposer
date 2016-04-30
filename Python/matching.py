@@ -32,64 +32,28 @@ def set_weights(A,N):
 
     return A
 
-
-def np_matching(np_T, size_T, err):
-    E = deepcopy(np_T)
-    T = np.array(np_T)
-    det_T = deepcopy(np_T)
-    if determinant(det_T,size_T,err) < err:
-        print "NUMPY - ZERO DET"
-        return []
-
-    M = []
-    true_cols = range(0,size_T)
-    true_rows = range(0, size_T)
-
-    while len(M) < size_T/2:
-        N = inv(T)
-
-        true_row = true_rows[0]
-        j_col = None
-        for col in xrange(0,len(N)):
-            if abs(N[0][col]) > err  and E[true_row][true_cols[col]]!= 0:
-                j_col = col
-                break
-
-        e = (true_row, true_cols[j_col])
-        M.append(e)
-        T = np.delete(T, (0), axis=0)
-        T = np.delete(T, (0), axis=1)
-        T = np.delete(T, (j_col-1), axis=0)
-        T = np.delete(T, (j_col-1), axis=1)
-        del true_cols[j_col]
-        del true_cols[0]
-        del true_rows[j_col]
-        del true_rows[0]
-
-    return M
-
-def matching(np_T, size_T, err):
+def matching(np_T, n, err):
     E = np_T
-    if determinant(deepcopy(np_T),size_T,err) < err:
+    if abs(determinant(deepcopy(np_T),n,err)) < err:
         print "NUMPY - ZERO DET"
         return []
 
     excl = set()
-    C_T = augment(np_T, size_T)
+    C_T = augment(np_T, n)
     M = []
 
-    while len(M) < size_T/2:
-        N = get_inv_from_C(inverse(deepcopy(C_T), size_T, excl, excl, err), size_T)
+    while len(M) < n/2:
+        N = inverse(deepcopy(C_T), n, excl, excl, err)
         first_row = None
-        for row in xrange(0, size_T):
+        for row in xrange(0, n):
             if not row in excl:
                 first_row = row
                 break
 
         j_col = None
-        for col in xrange(0,size_T):
-            if not col in excl and abs(N[first_row][col]) > err and E[first_row][col]!= 0:
-                j_col = col
+        for col in xrange(n,2*n):
+            if not (col-n) in excl and abs(N[first_row][col]) > err and E[first_row][col-n]!= 0:
+                j_col = col - n
                 break
 
         e = (first_row, j_col)
@@ -157,44 +121,38 @@ def hard_coded():
 
 '''
 
-def matching(T, N, err):
-
-    if abs(determinant(deepcopy(T),N)) < err:
-        return None
-
-    if det(np.array(deepcopy(T))) < err:
+def np_matching(np_T, size_T, err):
+    E = deepcopy(np_T)
+    T = np.array(np_T)
+    det_T = deepcopy(np_T)
+    if determinant(det_T,size_T,err) < err:
         print "NUMPY - ZERO DET"
+        return []
 
     M = []
-    excl_rows = set()
-    excl_cols = set()
+    true_cols = range(0,size_T)
+    true_rows = range(0, size_T)
 
-    T_C = augment(deepcopy(T),N)
+    while len(M) < size_T/2:
+        N = inv(T)
 
-    while len(M) < N/2:
-        N_C = inverse(deepcopy(T_C), N, excl_rows, excl_cols)
-        T_N = get_inv_from_C(N_C, N)
-
-        first_row = -1
-        for row in xrange(0, N):
-            if not_in_list(excl_rows, row):
-                first_row = row
-                break
-
-        j_col = -1
-        for col in xrange(0,N):
-            if not_in_list(excl_cols, col) and T_N[first_row][col] != 0 \
-                and T[first_row][col] != 0:
+        true_row = true_rows[0]
+        j_col = None
+        for col in xrange(0,len(N)):
+            if abs(N[0][col]) > err  and E[true_row][true_cols[col]]!= 0:
                 j_col = col
                 break
 
-        e = (first_row, j_col)
+        e = (true_row, true_cols[j_col])
         M.append(e)
-
-        excl_rows.add(first_row)
-        excl_rows.add(j_col)
-        excl_cols.add(first_row)
-        excl_cols.add(j_col)
+        T = np.delete(T, (0), axis=0)
+        T = np.delete(T, (0), axis=1)
+        T = np.delete(T, (j_col-1), axis=0)
+        T = np.delete(T, (j_col-1), axis=1)
+        del true_cols[j_col]
+        del true_cols[0]
+        del true_rows[j_col]
+        del true_rows[0]
 
     return M'''
 
