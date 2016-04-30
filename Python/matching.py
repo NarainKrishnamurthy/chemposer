@@ -5,6 +5,8 @@ from numpy.linalg import det, inv
 from determinant import determinant
 from inverse_test import inverse, augment, generate_matrix, get_inv_from_C
 
+
+
 def not_in_list(item_list, item):
     return item not in item_list
 
@@ -34,7 +36,8 @@ def set_weights(A,N):
 def np_matching(np_T, size_T, err):
     E = deepcopy(np_T)
     T = np.array(np_T)
-    if det(T) < err:
+    det_T = deepcopy(np_T)
+    if determinant(det_T,size_T,err) < err:
         print "NUMPY - ZERO DET"
         return []
 
@@ -43,10 +46,6 @@ def np_matching(np_T, size_T, err):
     true_rows = range(0, size_T)
 
     while len(M) < size_T/2:
-        if det(T) == 0:
-            print "SINGULAR"
-            return None
-
         N = inv(T)
 
         true_row = true_rows[0]
@@ -66,7 +65,39 @@ def np_matching(np_T, size_T, err):
         del true_cols[0]
         del true_rows[j_col]
         del true_rows[0]
-        
+
+    return M
+
+def matching(np_T, size_T, err):
+    E = np_T
+    if determinant(deepcopy(np_T),size_T,err) < err:
+        print "NUMPY - ZERO DET"
+        return []
+
+    excl = set()
+    C_T = augment(np_T, size_T)
+    M = []
+
+    while len(M) < size_T/2:
+        N = get_inv_from_C(inverse(deepcopy(C_T), size_T, excl, excl, err), size_T)
+        first_row = None
+        for row in xrange(0, size_T):
+            if not row in excl:
+                first_row = row
+                break
+
+        j_col = None
+        for col in xrange(0,size_T):
+            if not col in excl and abs(N[first_row][col]) > err and E[first_row][col]!= 0:
+                j_col = col
+                break
+
+        e = (first_row, j_col)
+        M.append(e)
+
+        excl.add(first_row)
+        excl.add(j_col)
+
     return M
 
 
@@ -83,18 +114,25 @@ def check_matching(M, N):
     v_sum = reduce(lambda x,y: x+y, v_dict)
     if v_sum != N:
         print "MATCHING FAILED"
-        return None
+        return 1
     else:
         print "MATCHING SUCCEDED"
         return 0
 
 def test(num_tests, N, err):
+    fail_counter = 0
     for test in xrange(0, num_tests):
         T = set_weights(generate_matrix(N,0,0), N)
-        M = np_matching(T, N, err)
-        print M
+        M = matching(T, N, err)
+        #print M
         if M is not None:
-            check_matching(M,N)
+            fail_counter += check_matching(M,N)
+
+    print "\n", fail_counter, " our of ", num_tests, " matchings failed"
+
+#hard_coded()
+N = 40
+test(100, N, 10**-6)
 
 def hard_coded():
     N = 10
@@ -115,13 +153,6 @@ def hard_coded():
     elif len(M) != 0:
         if check_matching(M,N) is None:
             return
-
-
-
-#hard_coded()
-N = 100
-test(1000, N, 10**-6)
-
 
 
 '''

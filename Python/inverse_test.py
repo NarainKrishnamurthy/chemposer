@@ -9,8 +9,7 @@ def not_in_list(item_list, item):
 def in_list(item_list, item):
     return item in item_list
 
-def inverse(Q, N, excl_rows, excl_cols, err):
-    C = deepcopy(Q)
+def inverse(C, N, excl_rows, excl_cols, err):
     n = N
     j = 0
     while (j < N):
@@ -130,4 +129,4 @@ def det_test():
     print det(A)
 
 #det_test()
-test(200,40,0,1,10**-6)
+#test(200,40,0,1,10**-6)
