@@ -11,14 +11,15 @@ def not_in_list(item_list, item):
 def in_list(item_list, item):
     return item in item_list
 
-def set_weights(A,N,m):
+def set_weights(A,N):
     counter = 0
+    m = random.randint(N,N*(N-1)/2)
     while counter < m:
         i = random.randint(0, N-1)
         j = random.randint(0, N-1)
 
         if A[i][j] == 0:
-            val = float(random.randint(0,2*m))
+            val = float(random.randint(1,N**2))
             if i < j:
                 A[i][j] = val
                 A[j][i] = -1.*val
@@ -35,7 +36,7 @@ def np_matching(np_T, size_T, err):
     T = np.array(np_T)
     if det(T) < err:
         print "NUMPY - ZERO DET"
-        return None
+        return []
 
     M = []
     true_cols = range(0,size_T)
@@ -51,20 +52,16 @@ def np_matching(np_T, size_T, err):
         true_row = true_rows[0]
         j_col = None
         for col in xrange(0,len(N)):
-            if N[0][col] != 0 and E[true_row][true_cols[col]]!= 0:
+            if abs(N[0][col]) > err  and E[true_row][true_cols[col]]!= 0:
                 j_col = col
                 break
 
-        #print true_row, j_col, true_cols[j_col]
         e = (true_row, true_cols[j_col])
         M.append(e)
-        print "\n", e
-        print T
         T = np.delete(T, (0), axis=0)
         T = np.delete(T, (0), axis=1)
         T = np.delete(T, (j_col-1), axis=0)
         T = np.delete(T, (j_col-1), axis=1)
-        print T
         del true_cols[j_col]
         del true_cols[0]
         del true_rows[j_col]
@@ -86,19 +83,44 @@ def check_matching(M, N):
     v_sum = reduce(lambda x,y: x+y, v_dict)
     if v_sum != N:
         print "MATCHING FAILED"
+        return None
     else:
         print "MATCHING SUCCEDED"
+        return 0
 
-def test(num_tests, N, m, err):
+def test(num_tests, N, err):
     for test in xrange(0, num_tests):
-        T = set_weights(generate_matrix(N,0,0), N, m)
+        T = set_weights(generate_matrix(N,0,0), N)
         M = np_matching(T, N, err)
         print M
         if M is not None:
             check_matching(M,N)
 
-N = 10
-test(1, N, N*4, 10**-4)
+def hard_coded():
+    N = 10
+    T = [[  0.,   0.,  61.,  32.,  99.,  83.,   0.,  11.,   0.,  30.],
+         [  0.,   0.,  77.,   0.,   0.,   0.,   0.,  20.,   0.,   0.],
+         [-61., -77.,   0.,   0.,   0.,   0.,   0.,   0.,   0.,   0.],
+         [-32.,   0.,   0.,   0.,   0.,  80.,  32.,   0.,  37.,  74.],
+         [-99.,   0.,   0.,   0.,   0.,   0.,   0.,  29.,   0.,  26.],
+         [-83.,   0.,   0., -80.,   0.,   0.,  35.,   6.,  38.,   0.],
+         [  0.,   0.,   0., -32.,   0., -35.,   0.,  10.,   0.,  28.],
+         [-11., -20.,   0.,   0., -29.,  -6., -10.,   0.,  96.,  50.],
+         [  0.,   0.,   0., -37.,   0., -38.,   0., -96.,   0.,  63.],
+         [-30.,   0.,   0., -74., -26.,   0., -28., -50., -63.,   0.]]
+    M = np_matching(T, N, 10**-4)
+    #print M
+    if M is None:
+        return
+    elif len(M) != 0:
+        if check_matching(M,N) is None:
+            return
+
+
+
+#hard_coded()
+N = 100
+test(1000, N, 10**-6)
 
 
 
