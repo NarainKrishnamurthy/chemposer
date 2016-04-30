@@ -9,7 +9,7 @@ def not_in_list(item_list, item):
 def in_list(item_list, item):
     return item in item_list
 
-def inverse(Q, N, excl_rows, excl_cols):
+def inverse(Q, N, excl_rows, excl_cols, err):
     C = deepcopy(Q)
     n = N
     j = 0
@@ -21,21 +21,14 @@ def inverse(Q, N, excl_rows, excl_cols):
             continue
 
         #IF... add a non-zero row to row j
-        if (C[j][j] == 0):
+        if abs(C[j][j]) < err:
             k = None
             #Find the non-zero k
             ##pragma omp parallel for
             for new_col in xrange(j+1,N):
-                if not_in_list(excl_cols, new_col) and (C[new_col][j]!=0):
+                if not_in_list(excl_cols, new_col) and abs(C[new_col][j])>err:
                     k = new_col
                     break
-
-            if k is None:
-                print "j: ", j
-                print "C num rows: ", len(C)
-                print "C num cols: ", len(C[0])
-                print "C[j][j]: ", C[j][j]
-                print "C[j] ", C[j]
 
             #Add the row k to row j
             for row in xrange(0, 2*N):
@@ -60,7 +53,6 @@ def inverse(Q, N, excl_rows, excl_cols):
         j += 1
         #print "finished row: ", C[j]
 
-    print C
     return C
 
 def get_inv_from_C(C, N):
@@ -74,17 +66,17 @@ def get_inv_from_C(C, N):
 def generate_matrix(N,a,b):
     return [[float(random.randint(a,b)) for i in range(N)] for j in range(N)]
 
-def my_inv_test(A, N, my_inv, err):
+def my_inv_test(A, N, my_inv, excl, err):
     a = np.array(A)
     I = a.dot(np.array(my_inv))
 
     error = False
-    for i in xrange(1,N-1):
-        if i == 4:
+    for i in xrange(0,N):
+        if i in excl:
             continue
 
-        for j in xrange(1,N-1):
-            if j == 4:
+        for j in xrange(0,N):
+            if j in excl:
                 continue
 
             if j == i:
@@ -115,17 +107,27 @@ def augment(A,N):
                 C[i].append(0.)
     return C
 
-def test(num_tests, N, a, b):
+def test(num_tests, N, a, b, err):
     for i in xrange(0, num_tests):
         A = generate_matrix(N,a,b)
-        if det(np.array(A)) == 0:
+        excl = [0,1,N-1]
+        npA = np.array(deepcopy(A))
+        npA = np.delete(npA, (excl), axis=0)
+        npA = np.delete(npA, (excl), axis=1)
+
+        if abs(det(np.array(npA))) < err:
             print "0 DETERMINANT"
             continue
 
         C = augment(A,N)
-
-        my_inv = get_inv_from_C(inverse(C, len(A), {}, {}), N)
+        my_inv = get_inv_from_C(inverse(C, len(A), excl, excl, err), N)
+        if my_inv_test(A, N, my_inv, excl, err) is None:
+            return
         
 
+def det_test():
+    A = [[1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0], [0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0], [1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0], [1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0], [1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0], [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0], [1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0]]
+    print det(A)
 
-#test(100,40,0,2000)
+#det_test()
+test(200,40,0,1,10**-6)

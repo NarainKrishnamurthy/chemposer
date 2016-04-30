@@ -3,15 +3,15 @@ import random
 from numpy.linalg import det
 from copy import deepcopy
 
-def determinant(A,N):
+def determinant(A,N, err):
     det = 1
     for rc in xrange(0,N):
         #swap rows
-        if A[rc][rc] == 0:
+        if abs(A[rc][rc]) < err:
             #print "swapping rows"
             new_col = None
             for i in xrange(rc+1,N):
-                if A[i][rc] != 0:
+                if abs(A[i][rc]) > err:
                     new_col = i
                     break
 
@@ -23,7 +23,7 @@ def determinant(A,N):
                     A[new_col][i] = temp
 
         for row_below in xrange(rc+1,N):
-            if A[row_below][rc] != 0:
+            if abs(A[row_below][rc]) > err:
                 val = A[row_below][rc]/A[rc][rc]
                 for i in xrange(0,N):
                     A[row_below][i] -= val*A[rc][i]
@@ -40,7 +40,7 @@ def test(num_tests, N, a, b, err):
     for i in xrange(0, num_tests):
         A = generate_matrix(N,a,b)
 
-        my_det = determinant(deepcopy(A),N)
+        my_det = determinant(deepcopy(A),N, err)
         np_det = det(np.array(deepcopy(A)))
         
         val1 = abs(my_det) < err
@@ -63,5 +63,5 @@ def specific_test():
     print determinant(A, len(A))
     print det(np_A)
 
-#test(1000,40,0,2000,10**-15)         
+#test(1000,40,0,1,10**-6)         
 
