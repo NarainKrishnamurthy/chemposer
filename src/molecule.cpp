@@ -137,8 +137,13 @@ double Molecule::determinant(std::vector<std::vector<double>> A, int N){
 */
 void Molecule::inverse(std::vector<std::vector<double>> &C, int N, std::map<int, int> excl){
   
+  for (int i=0; i<N;i++)
+    for(int j=0; j<N; j++)
+      C[i][j]  = C[i][j]*err;
+
   int j = 0;
   while (j<N){
+
 
     if (excl.count(j)>0){
       j += 1;
@@ -250,6 +255,7 @@ std::vector<std::tuple<int, int>> Molecule::matching(){
 
     if (first_row == -1){
       printf("FIRST ROW is -1");
+      printf("matching size = %d\n", M.size());
       return std::vector<std::tuple<int, int>>();
     }
   
@@ -257,27 +263,27 @@ std::vector<std::tuple<int, int>> Molecule::matching(){
     int j_col = -1;
     for(int col=n; col<2*n; col++){
       if (excl.count(col-n) == 0 && abs(N[first_row][col])>err && graph[first_row][col-n] != 0){
-        printf("N[first_row][j_col]: %f\n", N[first_row][col]); 
         j_col = col - n;
         break;
       }
     }
 
     if (j_col == -1){
-      printf("j_col is -1");
+      printf("j_col is -1\n");
+      printf("matching size = %d\n", M.size());
       return std::vector<std::tuple<int, int>>();
     }
 
 
-    printf("size of matching: %d\n", M.size());
+    //printf("size of matching: %d\n", M.size());
     M.push_back(std::make_tuple(first_row, j_col));
 
-    printf("(%d, %d)\n", first_row, j_col);
-    printf("Excl values: ");
-    for(auto it= excl.begin(); it != excl.end(); ++it){
-      printf(" %d ", it->first);
-    }
-    printf("\n");
+    //printf("(%d, %d)\n", first_row, j_col);
+    //printf("Excl values: ");
+    //for(auto it= excl.begin(); it != excl.end(); ++it){
+      //printf(" %d ", it->first);
+    //}
+    //printf("\n");
     //printMatrix(N);   
     excl.insert(std::pair<int,int>(first_row, 1));
     excl.insert(std::pair<int,int>(j_col, 1));
