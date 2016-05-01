@@ -73,7 +73,7 @@ void Molecule::perceiveBonds() {
         continue; // too close
 
       
-      float val = (float) dis(gen);
+      double val = (double) dis(gen);
       if (atom->id() > nbr->id()){
          val = -1.0 * val;
       } 
@@ -92,9 +92,9 @@ void Molecule::perceiveBonds() {
 } // end perceiveBonds
 
 
-float Molecule::determinant(std::vector<std::vector<float>> A, int N, float err){
+double Molecule::determinant(std::vector<std::vector<double>> A, int N){
 
-  float det = 1.0;
+  double det = 1.0;
 
   for(int rc=0; rc<N; rc++){
     if (abs(A[rc][rc]) < err){
@@ -107,29 +107,27 @@ float Molecule::determinant(std::vector<std::vector<float>> A, int N, float err)
       }
 
       if (new_col != -1){
-        det = det * (-1);
+        det = det * (-1.0);
         for(int i=0;i<N; i++){
-          float temp = A[rc][i];
+          double temp = A[rc][i];
           A[rc][i] = A[new_col][i];
           A[new_col][i] = temp;
         }
       }
 
     }
-
     for(int row_below=rc+1; row_below<N; row_below++){
       if (abs(A[row_below][rc]) > err){
-        float val = A[row_below][rc]/A[rc][rc];
+        double val = fmod(A[row_below][rc]/A[rc][rc], prime);
         for(int i=0; i<N; i++)
-          A[row_below][i] -= val*A[rc][i];
+          A[row_below][i] = fmod(A[row_below][i] - val*A[rc][i], prime);
       }
-
     }
 
   }
 
   for(int i=0; i<N; i++)
-    det *= A[i][i];
+    det = fmod(det*A[i][i], prime);
 
   return det;
 }
@@ -137,10 +135,8 @@ float Molecule::determinant(std::vector<std::vector<float>> A, int N, float err)
 
 /* inverse - Computes the inverse of an NxN matrix  A in place
 */
-void Molecule::inverse(std::vector<std::vector<float>> *Q, int N, std::map<int, int> excl, float err){
+void Molecule::inverse(std::vector<std::vector<double>> &C, int N, std::map<int, int> excl){
   
-  std::vector<std::vector<float>>& C = *Q;
-
   int j = 0;
   while (j<N){
 
@@ -159,32 +155,33 @@ void Molecule::inverse(std::vector<std::vector<float>> *Q, int N, std::map<int, 
       }
 
       if (k==-1){
+        printMatrix(C);
         printf("k is -1 \n");
         printf("j: %d\n", j);
       }
 
       for(int row=0; row<2*N; row++){
         if (excl.count(row) == 0){
-          C[j][row] += C[k][row];
+          C[j][row] = fmod(C[j][row] + C[k][row],prime);
         }
       }
     }
 
-    float ajj = C[j][j];
+    double ajj = C[j][j];
 
     for(int row=0; row<2*N; row++){
       if (excl.count(row) == 0)
-        C[j][row] /= ajj;
+        C[j][row] = fmod(C[j][row]/ajj, prime);
     }
 
     for(int col=0; col < N; col++){
       if ((col !=j) && excl.count(col)==0){
 
-        float aij = C[col][j];
+        double aij = C[col][j];
 
         for(int row=0;row<2*N;row++){
           if (excl.count(row) ==0){
-            C[col][row] = C[col][row] - aij*C[j][row];
+            C[col][row] = fmod(C[col][row] - aij*C[j][row], prime);
           }
         }
       }
@@ -193,12 +190,12 @@ void Molecule::inverse(std::vector<std::vector<float>> *Q, int N, std::map<int, 
   }
 }
 
-std::vector<std::vector<float>> Molecule::copy_graph(){
+std::vector<std::vector<double>> Molecule::copy_graph(){
 
   int N = numberOfAtoms();
-  vector<vector<float>> copy = vector<vector<float>>(N);
+  vector<vector<double>> copy = vector<vector<double>>(N);
   for(int i=0; i<N; i++)
-    copy[i] =  vector<float>(N);
+    copy[i] =  vector<double>(N);
 
   for (int i=0; i< N; i++)
     for (int j=0; j<N; j++)
@@ -207,12 +204,12 @@ std::vector<std::vector<float>> Molecule::copy_graph(){
   return copy;
 }
 
-std::vector<std::vector<float>> Molecule::copy_augC(){
+std::vector<std::vector<double>> Molecule::copy_augC(){
 
   int N = numberOfAtoms();
-  vector<vector<float>> copy = vector<vector<float>>(N);
+  vector<vector<double>> copy = vector<vector<double>>(N);
   for(int i=0; i<N; i++)
-    copy[i] = vector<float>(2*N);
+    copy[i] = vector<double>(2*N);
 
   for (int i=0; i< N; i++)
     for (int j=0; j<2*N; j++)
@@ -222,25 +219,28 @@ std::vector<std::vector<float>> Molecule::copy_augC(){
 }
 
 
-std::vector<std::tuple<float, float>> Molecule::matching(float err){
+std::vector<std::tuple<int, int>> Molecule::matching(){
 
   unsigned int n = numberOfAtoms();
-  std::vector<std::vector<float>> graph_copy = copy_graph();
-  float det = determinant(graph_copy, n, err);
+  std::vector<std::vector<double>> graph_copy = copy_graph();
+  double det = determinant(graph_copy, n);
+
+  printf("determinant: %f\n", det);
+  printf("det condition: %s\n", (std::abs(det) < err) ? "true" : "false");
+
   if (std::abs(det) < err){
-    return std::vector<std::tuple<float, float>>();
+    return std::vector<std::tuple<int, int>>();
   }
 
-  std::vector<std::tuple<float, float>> M = std::vector<std::tuple<float, float>>();
+  std::vector<std::tuple<int, int>> M = std::vector<std::tuple<int, int>>();
   std::map<int, int> excl = std::map<int, int>();
 
   while (M.size() < n/2){
-    printf("size of matching: %d\n", M.size());
-    std::vector<std::vector<float>> N = copy_augC();
-    inverse(&N, n, excl, err);
+    
+    std::vector<std::vector<double>> N = copy_augC();
+    inverse(N, n, excl);
     int first_row = -1;
 
-    
     for(int row=0; row<n; row++){
       if (excl.count(row) == 0){
         first_row = row;
@@ -248,16 +248,28 @@ std::vector<std::tuple<float, float>> Molecule::matching(float err){
       }
     }
 
+    if (first_row == -1){
+      printf("FIRST ROW is -1");
+      return std::vector<std::tuple<int, int>>();
+    }
+  
+
     int j_col = -1;
     for(int col=n; col<2*n; col++){
       if (excl.count(col-n) == 0 && abs(N[first_row][col])>err && graph[first_row][col-n] != 0){
-        printf("N[first_row][j_col]: %d\n", N[first_row][col]); 
+        printf("N[first_row][j_col]: %f\n", N[first_row][col]); 
         j_col = col - n;
         break;
       }
-
     }
 
+    if (j_col == -1){
+      printf("j_col is -1");
+      return std::vector<std::tuple<int, int>>();
+    }
+
+
+    printf("size of matching: %d\n", M.size());
     M.push_back(std::make_tuple(first_row, j_col));
 
     printf("(%d, %d)\n", first_row, j_col);
@@ -266,8 +278,7 @@ std::vector<std::tuple<float, float>> Molecule::matching(float err){
       printf(" %d ", it->first);
     }
     printf("\n");
-    
-    printMatrix(N);   
+    //printMatrix(N);   
     excl.insert(std::pair<int,int>(first_row, 1));
     excl.insert(std::pair<int,int>(j_col, 1));
   }
@@ -294,7 +305,7 @@ void Molecule::printMolecule(){
 
 }
 
-void Molecule::printMatrix(std::vector<std::vector<float>> A){
+void Molecule::printMatrix(std::vector<std::vector<double>> A){
   int count = 0;
 
   for(auto it= A.begin(); it != A.end(); ++it){
@@ -314,12 +325,12 @@ void Molecule::printGraph(){
   int count = 0;
 
   for(auto it= graph.begin(); it != graph.end(); ++it){
-    printf(" %d ---->  ", count);
+    printf("[");
     for(auto f= it->begin(); f != it->end(); ++f){
-      printf(" %f ", *f);
+      printf("%f,", *f);
 
     }
-    printf("\n");
+    printf("],\n");
     count++;
   }
   printf("%d\n",numBonds);
@@ -328,7 +339,7 @@ void Molecule::printGraph(){
 
 
 void Molecule::printDeterminant(){
-  printf("The determinant is = %f\n", det);
+
 }
 
 
@@ -349,12 +360,12 @@ void Molecule::printAugMatrix(){
 void Molecule::initializeGraph(){
 
   int N = numberOfAtoms();
-  graph = vector<vector<float>>(N);
-  augC = vector<vector<float>>(N);
+  graph = vector<vector<double>>(N);
+  augC = vector<vector<double>>(N);
 
   for(int i=0; i<N; ++i){
-    graph[i] =  vector<float>(N);
-    augC[i] = vector<float>(2*N);
+    graph[i] =  vector<double>(N);
+    augC[i] = vector<double>(2*N);
   }
 
   for (int j=0; j< N; j++){

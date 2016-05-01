@@ -12,6 +12,8 @@
 
 class Molecule {
  public:
+ double prime = 512009;
+ double err = 0.000001;
  Molecule() {};
  ~Molecule() {}
 
@@ -39,24 +41,22 @@ class Molecule {
  void printMolecule();
  void printGraph();
  void initializeGraph();
- void inverse(std::vector<std::vector<float>> *C, int N, std::map<int, int> excl, float err);
- float determinant(std::vector<std::vector<float>> A, int N, float err);
- void printMatrix(std::vector<std::vector<float>> A);
+ void inverse(std::vector<std::vector<double>> &C, int N, std::map<int, int> excl);
+ double determinant(std::vector<std::vector<double>> A, int N);
+ void printMatrix(std::vector<std::vector<double>> A);
  void printAugMatrix();
  void printDeterminant();
- std::vector<std::vector<float>> copy_graph();
- std::vector<std::vector<float>> copy_augC();
- std::vector<std::tuple<float, float>> matching(float err);
+ std::vector<std::vector<double>> copy_graph();
+ std::vector<std::vector<double>> copy_augC();
+ std::vector<std::tuple<int, int>> matching();
 
 
  protected:
   std::vector<Atom*> _atoms;
   std::vector<Bond*> _bonds;
   unsigned int numBonds;
-  std::vector<std::vector<float>> graph;
-  std::vector<std::vector<float>> augC;
-  float det;
-
+  std::vector<std::vector<double>> graph;
+  std::vector<std::vector<double>> augC;
 };
 
 #endif
