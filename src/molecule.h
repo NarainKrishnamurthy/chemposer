@@ -11,10 +11,12 @@
 #include <map>
 #include "Eigen/Dense"
 
+using namespace Eigen;
+
 class Molecule {
  public:
  double prime = 32768011;
- double err = 0.000000001;
+ double err = 0.0000000001;
  //double err = 0.0000001;
  Molecule() {};
  ~Molecule() {}
@@ -48,6 +50,7 @@ class Molecule {
  void printAugMatrix();
  void printDeterminant();
  std::vector<std::tuple<int, int>> matching();
+ VectorXd solve(MatrixXd A,  VectorXd b, int m);
 
 
  protected:

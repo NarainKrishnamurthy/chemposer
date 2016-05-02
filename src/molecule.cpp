@@ -2,6 +2,7 @@
 
 #include "molecule.h"
 #include <random>
+#include <iostream>
 
 using namespace std;
 using namespace Eigen;
@@ -92,6 +93,84 @@ void Molecule::perceiveBonds() {
 } // end perceiveBonds
 
 
+VectorXd  Molecule::solve(MatrixXd A,  VectorXd b, int m){
+  MatrixXd U = MatrixXd(A);
+  MatrixXd L = MatrixXd::Identity(m, m);
+  MatrixXd P = MatrixXd::Identity(m, m);
+  for (int k=0; k<m-1; k++){
+    int i = -1;
+    double max = -1;
+    for (int row = k; row<m; row++){
+      if (abs(U(row, k)) > max){
+        i = row;
+        max = abs(U(row, k));
+      }
+    }
+
+    for (int col=k; col<m; col++){
+        double temp = U(k,col);
+        U(k,col) = U(i,col);
+        U(i,col) = temp;
+    }
+
+    for (int col=0; col<k; col++){
+        double temp = L(k,col);
+        L(k,col) = L(i,col);
+        L(i,col) = temp;
+    }
+
+    for (int col=0; col<m; col++){
+        double temp = P(k,col);
+        P(k,col) = P(i,col);
+        P(i,col) = temp;
+    }
+
+    for (int j=k+1; j<m; j++){
+      L(j,k) = U(j,k)/U(k,k);
+      for (int col=k; col<m; col++){
+        U(j,col) = U(j,col) - L(j,k)*U(k,col);
+      }
+    }
+  }
+
+  VectorXd x = VectorXd::Zero(m);
+  VectorXd y = VectorXd::Zero(m);
+  VectorXd Pb = P*b;
+
+
+
+  for (int i = 0; i < m; i++){
+    double rhs = Pb(i);
+    for (int j=0; j<i; j++){
+      rhs = rhs - L(i,j)*y(j);
+    }
+    y(i) = rhs;
+  }
+
+  for (int i=m-1; i>=0; i--){
+    double rhs = y(i);
+    for (int j=m-1; j> i; j--){
+      rhs = rhs - U(i,j)*x(j);
+    }
+    x(i) = rhs/U(i,i);
+  }
+
+  //const IOFormat fmt(2, DontAlignCols, "\t", " ", "", "", "", "");
+  //cout << (U*x).format(fmt) << endl;
+  //cout << (y).format(fmt) << "\n"<< endl;
+
+  //bool is_approx = (U*x).isApprox(y, 1.0);
+  //printf("Matrices are %s\n", is_approx ? "SIMILAR" : "NOT SIMILAR");
+
+
+  //const IOFormat fmt(2, DontAlignCols, "\t", " ", "", "", "", "");
+  //cout << ((P*A) - (L*U)).format(fmt) << "\n"<< endl;
+  //bool is_approx = (P*A).isApprox(L*U, 1.0);
+  //printf("Matrices are %s\n", is_approx ? "SIMILAR" : "NOT SIMILAR");
+  return x;
+}
+
+
 std::vector<std::tuple<int, int>> Molecule::matching(){
 
   unsigned int n = numberOfAtoms();
@@ -116,7 +195,9 @@ std::vector<std::tuple<int, int>> Molecule::matching(){
   }
 
   while (M.size() < n/2){
-      VectorXd x = A.partialPivLu().solve(b);
+      solve(A,b,matrix_size);
+      VectorXd x = solve(A,b,matrix_size);
+      //VectorXd x = A.partialPivLu().solve(b);
 
       int row_j = -1;
       
@@ -261,10 +342,7 @@ void Molecule::initializeGraph(){
         augC[j][k+N] = 1;
       }
     }
-
   }
-
-  
 }
 
 /*
