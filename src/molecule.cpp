@@ -249,14 +249,14 @@ std::vector<std::tuple<int, int>> Molecule::matching(){
   std::vector<std::tuple<int, int>> M = std::vector<std::tuple<int, int>>();
 
 
-  MatrixXf A(matrix_size, matrix_size);
-  VectorXf b = VectorXf::Zero(matrix_size);
+  MatrixXd A(matrix_size, matrix_size);
+  VectorXd b = VectorXd::Zero(matrix_size);
   b[0] = 1;
 
   //Set A
   for (int row=0; row<n; row++){
     for (int col=0; col<n; col++){
-      A(row, col) = graph[row][col];
+      A(row, col) = .1*graph[row][col];
     }
   }
 
@@ -266,7 +266,7 @@ std::vector<std::tuple<int, int>> Molecule::matching(){
   }
 
   while (M.size() < n/2){
-      VectorXf x = A.partialPivLu().solve(b);
+      VectorXd x = A.partialPivLu().solve(b);
 
       int row_j = -1;
       
@@ -286,7 +286,7 @@ std::vector<std::tuple<int, int>> Molecule::matching(){
       }
 
       M.push_back(std::make_tuple(rc_map[0], rc_map[row_j]));
-      MatrixXf A_copy = MatrixXf(A);
+      MatrixXd A_copy = MatrixXd(A);
 
       int row_counter = 0;
       for (int i=0; i<matrix_size; i++){
