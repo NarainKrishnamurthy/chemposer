@@ -4,6 +4,7 @@
 #include <random>
 
 using namespace std;
+using namespace Eigen;
 
 bool sortAtomZ(const pair<Atom*,double> &a, const pair<Atom*,double> &b)
 {   return (a.second < b.second); }
@@ -244,71 +245,81 @@ std::vector<std::vector<double>> Molecule::copy_augC(){
 std::vector<std::tuple<int, int>> Molecule::matching(){
 
   unsigned int n = numberOfAtoms();
-  std::vector<std::vector<double>> graph_copy = copy_graph();
-  double det = determinant(graph_copy, n);
+  int matrix_size = n;
+  std::vector<std::tuple<int, int>> M = std::vector<std::tuple<int, int>>();
 
-  printf("determinant: %f\n", det);
-  printf("det condition: %s\n", (std::abs(det) < err) ? "true" : "false");
 
-  if (std::abs(det) < err){
-    return std::vector<std::tuple<int, int>>();
+  MatrixXf A(matrix_size, matrix_size);
+  VectorXf b = VectorXf::Zero(matrix_size);
+  b[0] = 1;
+
+  //Set A
+  for (int row=0; row<n; row++){
+    for (int col=0; col<n; col++){
+      A(row, col) = .0000001 * graph[row][col];
+    }
   }
 
-
-  printf("current error is: %.3e\n", err);
-
-  std::vector<std::tuple<int, int>> M = std::vector<std::tuple<int, int>>();
-  std::map<int, int> excl = std::map<int, int>();
+  vector<int> rc_map = vector<int>();
+  for (int i=0; i<n; i++){
+    rc_map.push_back(i);
+  }
 
   while (M.size() < n/2){
-    
-    std::vector<std::vector<double>> N = copy_augC();
-    inverse(N, n, excl);
-    int first_row = -1;
+      VectorXf x = A.partialPivLu().solve(b);
 
-    for(int row=0; row<n; row++){
-      if (excl.count(row) == 0){
-        first_row = row;
-        break;
+      int row_j = -1;
+      
+      for (int row=0; row< matrix_size; row++){
+        int true_first_col = rc_map[0];
+        int true_row = rc_map[row];
+        if (abs(x[row]) > err && graph[true_row][true_first_col]!=0){
+          row_j = row;
+          break;
+        }
       }
-    }
 
-    if (first_row == -1){
-      printf("FIRST ROW is -1");
-      printf("matching size = %d\n", M.size());
-      return std::vector<std::tuple<int, int>>();
-    }
-  
-
-    int j_col = -1;
-    for(int col=n; col<2*n; col++){
-      if (excl.count(col-n) == 0 && abs(N[first_row][col])>err && graph[first_row][col-n] != 0){
-        j_col = col - n;
-        break;
+      if (row_j == -1){
+        printf("row_j is -1\n");
+        printf("matching size = %d\n", M.size());
+        return std::vector<std::tuple<int, int>>();
       }
-    }
 
-    if (j_col == -1){
-      printf("j_col is -1\n");
-      printf("matching size = %d\n", M.size());
-      return std::vector<std::tuple<int, int>>();
-    }
+      M.push_back(std::make_tuple(rc_map[0], rc_map[row_j]));
+      MatrixXf A_copy = MatrixXf(A);
 
+      int row_counter = 0;
+      for (int i=0; i<matrix_size; i++){
+        if (i != 0 && i != row_j){
+          int col_counter = 0;
+          for (int j=0; j<matrix_size; j++){
+            if (j!=0 && j!=row_j){
+              A(row_counter, col_counter) = A_copy(i,j);
+              col_counter++;
+            }
+          }
+          row_counter++;
+        }
+      }
+      matrix_size -= 2;
+      A.conservativeResize(matrix_size, matrix_size);
+      b.conservativeResize(matrix_size,1);
+      if (matrix_size != 0){
+        b[0] = 1;
+      }
 
-    printf("size of matching: %d\n", M.size());
-    M.push_back(std::make_tuple(first_row, j_col));
+      rc_map.erase(rc_map.begin() + row_j);
+      rc_map.erase(rc_map.begin());
 
-    //printf("(%d, %d)\n", first_row, j_col);
-    //printf("Excl values: ");
-    //for(auto it= excl.begin(); it != excl.end(); ++it){
-      //printf(" %d ", it->first);
-    //}
-    //printf("\n");
-    //printMatrix(N);   
-    excl.insert(std::pair<int,int>(first_row, 1));
-    excl.insert(std::pair<int,int>(j_col, 1));
   }
+  printMatching(M);
   return M;
+}
+
+void Molecule::printMatching(std::vector<std::tuple<int, int>> M){
+  for(auto it= M.begin(); it != M.end(); ++it){
+    printf("(%d, %d)\n", get<0>(*it), get<1>(*it));
+  }
 }
 
 void Molecule::doMatching() {
@@ -406,3 +417,75 @@ void Molecule::initializeGraph(){
   
 }
 
+/*
+
+std::vector<std::tuple<int, int>> Molecule::matching(){
+
+  unsigned int n = numberOfAtoms();
+  std::vector<std::vector<double>> graph_copy = copy_graph();
+  double det = determinant(graph_copy, n);
+
+  printf("determinant: %f\n", det);
+  printf("det condition: %s\n", (std::abs(det) < err) ? "true" : "false");
+
+  if (std::abs(det) < err){
+    return std::vector<std::tuple<int, int>>();
+  }
+
+
+  printf("current error is: %.3e\n", err);
+
+  std::vector<std::tuple<int, int>> M = std::vector<std::tuple<int, int>>();
+  std::map<int, int> excl = std::map<int, int>();
+
+  while (M.size() < n/2){
+    
+    std::vector<std::vector<double>> N = copy_augC();
+    inverse(N, n, excl);
+    int first_row = -1;
+
+    for(int row=0; row<n; row++){
+      if (excl.count(row) == 0){
+        first_row = row;
+        break;
+      }
+    }
+
+    if (first_row == -1){
+      printf("FIRST ROW is -1");
+      printf("matching size = %d\n", M.size());
+      return std::vector<std::tuple<int, int>>();
+    }
+  
+
+    int j_col = -1;
+    for(int col=n; col<2*n; col++){
+      if (excl.count(col-n) == 0 && abs(N[first_row][col])>err && graph[first_row][col-n] != 0){
+        j_col = col - n;
+        break;
+      }
+    }
+
+    if (j_col == -1){
+      printf("j_col is -1\n");
+      printf("matching size = %d\n", M.size());
+      return std::vector<std::tuple<int, int>>();
+    }
+
+
+    printf("size of matching: %d\n", M.size());
+    M.push_back(std::make_tuple(first_row, j_col));
+
+    //printf("(%d, %d)\n", first_row, j_col);
+    //printf("Excl values: ");
+    //for(auto it= excl.begin(); it != excl.end(); ++it){
+      //printf(" %d ", it->first);
+    //}
+    //printf("\n");
+    //printMatrix(N);   
+    excl.insert(std::pair<int,int>(first_row, 1));
+    excl.insert(std::pair<int,int>(j_col, 1));
+  }
+  return M;
+}
+*/

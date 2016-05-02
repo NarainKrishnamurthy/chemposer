@@ -9,15 +9,17 @@
 #include "atom.h"
 #include "bond.h"
 #include <map>
+#include "Eigen/Dense"
 
 class Molecule {
  public:
  double prime = 32768011;
- double err = 0.0000000000000001;
+ double err = 0.0000000000000000001;
  //double err = 0.0000001;
  Molecule() {};
  ~Molecule() {}
 
+ void printMatching(std::vector<std::tuple<int, int>> M);
  void addAtom(Atom *atom) { _atoms.push_back(atom); }
  void addAtom(unsigned int element, double x, double y, double z)
  { Atom *a = new Atom(element, x, y, z, _atoms.size()); _atoms.push_back(a); }
