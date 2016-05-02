@@ -44,13 +44,9 @@ class Molecule {
  void printMolecule();
  void printGraph();
  void initializeGraph();
- void inverse(std::vector<std::vector<double>> &C, int N, std::map<int, int> excl);
- double determinant(std::vector<std::vector<double>> A, int N);
  void printMatrix(std::vector<std::vector<double>> A);
  void printAugMatrix();
  void printDeterminant();
- std::vector<std::vector<double>> copy_graph();
- std::vector<std::vector<double>> copy_augC();
  std::vector<std::tuple<int, int>> matching();
 
 
