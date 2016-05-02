@@ -64,7 +64,87 @@ def matching(np_T, n, err):
 
     return M
 
+def is_blue(val):
+    return val == "blue"
 
+def is_red(val):
+    return val == "red"
+
+def color(p):
+    x = random.uniform(0,1)
+    if p < x:
+        return "blue"
+    else:
+        return "red"
+
+def is_colored(val):
+    return is_blue(val) or is_red(val)
+
+def select(V):
+    if len(V) == 0:
+        return "inf"
+    else:
+        return V[0]
+
+def greedy_maximal_matching(A, N, p):
+    pi = [0]*N
+    sigma = [0]*N
+    for v in xrange(0,N):
+        pi[v] = "blue"
+
+    done = False
+    while not done:
+        #Assign Vertex Colors
+        done = True
+        for v in xrange(0,N):
+            if is_colored(pi[v]):
+                done = False
+                pi[v] = color(p)
+
+        #Blue Vertices Propose to Red Vertices
+        for v in xrange(0,N):
+            if is_blue(pi[v]):
+                colored_set = filter(lambda j: is_colored(pi[j]), A[v])
+                if len(colored_set) == 0:
+                    sigma[v] = "dead"
+                else:
+                    select_set = filter(lambda j: is_red(pi[j]), A[v])
+                    sigma[v] = select(select_set)
+            else:
+                sigma[v] = "inf"
+
+        #Red vertices respond to blue vertices
+        for v in xrange(0,N):
+            if is_red(pi[v]):
+                colored_set = filter(lambda j: is_colored(pi[j]), A[v])
+                if len(colored_set) == 0:
+                    sigma[v] = "dead"
+                else:
+                    select_set = filter(lambda j: is_blue(pi[j]) and sigma[j] == v, A[v])
+                    sigma[v] = select(select_set)
+
+        #Match mutual proposals
+        for v in xrange(0,N):
+            if sigma[v] == "dead":
+                pi[v] = "dead"
+            elif not sigma[v] == "inf":
+                if sigma[sigma[v]] == v:
+                    pi[v] = min(v, sigma[v])
+
+        return pi
+
+def matrix_to_adjlist(A, N):
+    G = []
+    for i in xrange(N):
+        G.append([])
+
+    for r in xrange(N):
+        for c in xrange(N):
+            if A[r][c] != 0:
+                G[r].append(c)
+
+        random.shuffle(G[r])
+    return G
 
 def check_matching(M, N):
     v_dict = [0]*N
@@ -83,21 +163,32 @@ def check_matching(M, N):
         print "MATCHING SUCCEDED"
         return 0
 
-def test(num_tests, N, err):
+def greedy_las_vegas(G,N,p):
+    num_unmatched = 99
+    counter = 0
+    pi = []
+    while num_unmatched != 0 and counter < 3000:
+        pi = greedy_maximal_matching(G,N,p)
+        unmatched = filter(lambda x: is_blue(x) or is_red(x), pi)
+        num_unmatched = len(unmatched)
+        counter += 1
+
+    return pi
+
+
+def test(num_tests, N, err, p):
     fail_counter = 0
     for test in xrange(0, num_tests):
         T = set_weights(generate_matrix(N,0,0), N)
-        M = matching(T, N, err)
-        #print M
-        if M is not None:
-            fail_counter += check_matching(M,N)
+        if abs(det(np.array(T))) < err:
+            print "ZERO DET"
+        else:
+            G = matrix_to_adjlist(T, N)
+            pi = greedy_las_vegas(G, N, 0.5)
+            print pi
 
-    print "\n", fail_counter, " our of ", num_tests, " matchings failed"
 
-#hard_coded()
-N = 40
-test(100, N, 10**-6)
-
+#test(1, 20, 10**-6, 0.53406)
 def hard_coded():
     N = 10
     T = [[  0.,   0.,  61.,  32.,  99.,  83.,   0.,  11.,   0.,  30.],
@@ -110,14 +201,13 @@ def hard_coded():
          [-11., -20.,   0.,   0., -29.,  -6., -10.,   0.,  96.,  50.],
          [  0.,   0.,   0., -37.,   0., -38.,   0., -96.,   0.,  63.],
          [-30.,   0.,   0., -74., -26.,   0., -28., -50., -63.,   0.]]
-    M = np_matching(T, N, 10**-4)
-    #print M
-    if M is None:
-        return
-    elif len(M) != 0:
-        if check_matching(M,N) is None:
-            return
+    
+    G = matrix_to_adjlist(T, N)
+    #print G
+    pi = greedy_las_vegas(G, N, 0.5)
+    print pi
 
+#hard_coded()
 
 '''
 

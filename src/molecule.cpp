@@ -137,37 +137,54 @@ double Molecule::determinant(std::vector<std::vector<double>> A, int N){
 */
 void Molecule::inverse(std::vector<std::vector<double>> &C, int N, std::map<int, int> excl){
   
-  for (int i=0; i<N;i++)
-    for(int j=0; j<N; j++)
-      C[i][j]  = C[i][j]*err;
+
+  double err_power = err*(((double) 4*excl.size())/((double) N)+10.0);
+  err_power = .0000000000001;
+  printf("err_power: %.3e\n", err_power);
+
+
 
   int j = 0;
   while (j<N){
-
-
+    
     if (excl.count(j)>0){
       j += 1;
       continue;
     }
+
+
+    if (j % 10 == 0){
+      for (int r=j+1; r<N;r++){
+        for(int c=0; c<N; c++){
+          C[r][c]  = C[r][c]*1000;
+        }
+      }
+    }
+
+
     if (std::abs(C[j][j]) < err){
       int k = -1;
 
       for(int new_col=j+1; new_col<N; new_col++){
-        if (excl.count(new_col) == 0 && std::abs(C[new_col][j]) > err){
+        if (excl.count(new_col) == 0 && std::abs(C[new_col][j]) > 0){
           k = new_col;
           break;
         }
       }
 
       if (k==-1){
-        printMatrix(C);
         printf("k is -1 \n");
         printf("j: %d\n", j);
+        for(int new_col=j+1; new_col<N; new_col++){
+          printf("in excl: %s value: %.4e above err: %s\n", excl.count(new_col) == 0 ? "true" : "false", 
+            C[new_col][j],
+            std::abs(C[new_col][j]) > err ? "true" : "false");
+        }
       }
 
       for(int row=0; row<2*N; row++){
         if (excl.count(row) == 0){
-          C[j][row] = fmod(C[j][row] + C[k][row],prime);
+          C[j][row] = C[j][row] + C[k][row],prime;
         }
       }
     }
@@ -176,7 +193,7 @@ void Molecule::inverse(std::vector<std::vector<double>> &C, int N, std::map<int,
 
     for(int row=0; row<2*N; row++){
       if (excl.count(row) == 0)
-        C[j][row] = fmod(C[j][row]/ajj, prime);
+        C[j][row] = C[j][row]/ajj, prime;
     }
 
     for(int col=0; col < N; col++){
@@ -186,7 +203,7 @@ void Molecule::inverse(std::vector<std::vector<double>> &C, int N, std::map<int,
 
         for(int row=0;row<2*N;row++){
           if (excl.count(row) ==0){
-            C[col][row] = fmod(C[col][row] - aij*C[j][row], prime);
+            C[col][row] = C[col][row] - aij*C[j][row], prime;
           }
         }
       }
@@ -237,6 +254,9 @@ std::vector<std::tuple<int, int>> Molecule::matching(){
     return std::vector<std::tuple<int, int>>();
   }
 
+
+  printf("current error is: %.3e\n", err);
+
   std::vector<std::tuple<int, int>> M = std::vector<std::tuple<int, int>>();
   std::map<int, int> excl = std::map<int, int>();
 
@@ -275,7 +295,7 @@ std::vector<std::tuple<int, int>> Molecule::matching(){
     }
 
 
-    //printf("size of matching: %d\n", M.size());
+    printf("size of matching: %d\n", M.size());
     M.push_back(std::make_tuple(first_row, j_col));
 
     //printf("(%d, %d)\n", first_row, j_col);
