@@ -137,8 +137,6 @@ VectorXd  Molecule::solve(MatrixXd A,  VectorXd b, int m){
   VectorXd y = VectorXd::Zero(m);
   VectorXd Pb = P*b;
 
-
-
   for (int i = 0; i < m; i++){
     double rhs = Pb(i);
     for (int j=0; j<i; j++){
@@ -195,7 +193,6 @@ std::vector<std::tuple<int, int>> Molecule::matching(){
   }
 
   while (M.size() < n/2){
-      solve(A,b,matrix_size);
       VectorXd x = solve(A,b,matrix_size);
       //VectorXd x = A.partialPivLu().solve(b);
 
