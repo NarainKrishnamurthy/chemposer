@@ -14,7 +14,7 @@
 class Molecule {
  public:
  double prime = 32768011;
- double err = 0.0000000000000000001;
+ double err = 0.000000001;
  //double err = 0.0000001;
  Molecule() {};
  ~Molecule() {}

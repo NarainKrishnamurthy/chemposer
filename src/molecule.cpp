@@ -256,7 +256,7 @@ std::vector<std::tuple<int, int>> Molecule::matching(){
   //Set A
   for (int row=0; row<n; row++){
     for (int col=0; col<n; col++){
-      A(row, col) = .0000001 * graph[row][col];
+      A(row, col) = graph[row][col];
     }
   }
 
