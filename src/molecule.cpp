@@ -181,6 +181,7 @@ std::vector<std::tuple<int, int>> Molecule::matching(){
   b[0] = 1;
 
   //Set A
+  #pragma omp parallel for schedule(static)
   for (int row=0; row<n; row++){
     for (int col=0; col<n; col++){
       A(row, col) = .1*graph[row][col];
@@ -216,14 +217,40 @@ std::vector<std::tuple<int, int>> Molecule::matching(){
       M.push_back(std::make_tuple(rc_map[0], rc_map[row_j]));
       MatrixXd A_copy = MatrixXd(A);
 
+      //std::vector<int> mapIndtoIncl(matrix_size);
+     // std::vector<int> col_count(matrix_size);
+
       int row_counter = 0;
+
       for (int i=0; i<matrix_size; i++){
         if (i != 0 && i != row_j){
-          int col_counter = 0;
+/*
+          #pragma omp parallel for schedule(static)
+          for (int k=0;k<matrix_size;k++){
+            if (k != 0 && k != row_j){
+              mapIndtoIncl[k] = 1; 
+            }
+            else{
+              mapIndtoIncl[k] = 0;
+            }
+          }
+
+          int csum = 0;
+
+          for (int i = 0; i < matrix_size; ++i)
+          {
+            csum += mapIndtoIncl[i];
+            col_count[i] = csum;
+          }
+
+          #pragma omp parallel for schedule(static)
+          */
+          int counter_col=0;
           for (int j=0; j<matrix_size; j++){
             if (j!=0 && j!=row_j){
-              A(row_counter, col_counter) = A_copy(i,j);
-              col_counter++;
+              //A(row_counter, col_count[j]-1) = A_copy(i,j);    
+              A(row_counter, counter_col) = A_copy(i,j);   
+              counter_col++;
             }
           }
           row_counter++;

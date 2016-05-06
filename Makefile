@@ -1,10 +1,9 @@
-## Variables
 
 SRC := src
 SOURCES := $(wildcard src/*.cpp)
 OBJS    := $(patsubst src/%,build/%,$(SOURCES:.cpp=.o))
-CC  = g++
-CFLAGS = -Wall -Wextra -O2 -std=c++11
+CC  = clang-omp
+CFLAGS = -Wall -Wextra -O2 -std=c++11 -fopenmp
 EXEC_NAME = chemposer
 
 
@@ -26,6 +25,3 @@ dirs:
 clean:
 	rm -rf $(EXEC_NAME) build
 
-
-
- 

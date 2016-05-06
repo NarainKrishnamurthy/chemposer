@@ -11,6 +11,8 @@
 #include "molecule.h"
 #include "atom.h"
 #include "bond.h"
+#include <ctime>
+
 
 bool readXYZ(Molecule &mol, const char* filename);
 bool writeSDF(Molecule &mol, const char* filename);
@@ -35,9 +37,9 @@ int main (int argc, char *argv[])
   
     mol.perceiveBonds();
 
-    printf(" \n\n Augmented Matrix before taking the inverse \n\n");
+   // printf(" \n\n Augmented Matrix before taking the inverse \n\n");
 
-    mol.printAugMatrix();
+    //mol.printAugMatrix();
 
     cout << "Molecule has " << mol.numberOfAtoms() << " atoms and " << mol.numberOfBonds() << " bonds." << endl;
 
@@ -53,18 +55,29 @@ int main (int argc, char *argv[])
   
     }
 */
-    mol.inverse(&excl_cols, &excl_rows, &err);
+    //mol.inverse(&excl_cols, &excl_rows, &err);
 
    // printf(" \n\n Augmented Matrix after taking inverse \n\n");
 
-    mol.determinant(&err);
+    //mol.determinant(&err);
 
-    mol.printDeterminant();
+    //mol.printDeterminant();
 
     //mol.printAugMatrix();
 
     //mol.printGraph();
-    mol.doMatching();
+
+    //taken from http://stackoverflow.com/questions/2808398/easily-measure-elapsed-time
+    clock_t begin = clock();
+
+    mol.matching();
+
+
+    clock_t end = clock();
+    double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+    /////
+
+    printf("\n\nTime taken = %f\n\n", elapsed_secs);
 
     std::vector<Atom*> atoms = mol.atoms();
     unsigned int j = 0;
