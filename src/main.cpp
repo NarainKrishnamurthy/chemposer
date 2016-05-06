@@ -33,9 +33,31 @@ int main (int argc, char *argv[])
     if (!readXYZ(mol, argv[a]))
       cout << "Cannot read the XYZ file" << endl;
 
-    mol.initializeGraph();
   
-    mol.perceiveBonds();
+    clock_t begin = clock();
+
+   
+    mol.initializeGraph();
+
+
+    clock_t end = clock();
+    double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+    /////
+
+    printf("\n\nTime taken by initialize graph = %f\n\n", elapsed_secs);
+
+
+    begin = clock();
+
+   
+    mol.perceiveBonds();  
+
+    end = clock();
+
+    elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+    /////
+
+    printf("\n\nTime taken by perceive bonds= %f\n\n", elapsed_secs);
 
    // printf(" \n\n Augmented Matrix before taking the inverse \n\n");
 
@@ -68,16 +90,16 @@ int main (int argc, char *argv[])
     //mol.printGraph();
 
     //taken from http://stackoverflow.com/questions/2808398/easily-measure-elapsed-time
-    clock_t begin = clock();
+    begin = clock();
 
     mol.matching();
 
 
-    clock_t end = clock();
-    double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+    end = clock();
+    elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
     /////
 
-    printf("\n\nTime taken = %f\n\n", elapsed_secs);
+    printf("\n\nTime taken by matching function = %f\n\n", elapsed_secs);
 
     std::vector<Atom*> atoms = mol.atoms();
     unsigned int j = 0;

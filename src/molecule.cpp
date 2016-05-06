@@ -44,6 +44,7 @@ void Molecule::perceiveBonds() {
   std::mt19937 gen(rd());
   std::uniform_int_distribution<> dis(1, n*n);
 
+  #pragma parallel for schedule(static)
   for (unsigned int j = 0; j < max ; ++j) {
     double maxcutoff = SQUARE(rad[j]+maxrad+0.45);
     atom = zsortedAtoms[j].first;
@@ -97,6 +98,8 @@ VectorXd  Molecule::solve(MatrixXd A,  VectorXd b, int m){
   MatrixXd U = MatrixXd(A);
   MatrixXd L = MatrixXd::Identity(m, m);
   MatrixXd P = MatrixXd::Identity(m, m);
+
+  #pragma parallel for schedule(dynamic)
   for (int k=0; k<m-1; k++){
     int i = -1;
     double max = -1;
@@ -107,26 +110,31 @@ VectorXd  Molecule::solve(MatrixXd A,  VectorXd b, int m){
       }
     }
 
+    //#pragma parallel for schedule(static)
     for (int col=k; col<m; col++){
         double temp = U(k,col);
         U(k,col) = U(i,col);
         U(i,col) = temp;
     }
 
+    //#pragma parallel for schedule(static)
     for (int col=0; col<k; col++){
         double temp = L(k,col);
         L(k,col) = L(i,col);
         L(i,col) = temp;
     }
 
+    //#pragma parallel for schedule(static)
     for (int col=0; col<m; col++){
         double temp = P(k,col);
         P(k,col) = P(i,col);
         P(i,col) = temp;
     }
 
+   // #pragma parallel for schedule(dynamic)
     for (int j=k+1; j<m; j++){
       L(j,k) = U(j,k)/U(k,k);
+     // #pragma parallel for schedule(static)
       for (int col=k; col<m; col++){
         U(j,col) = U(j,col) - L(j,k)*U(k,col);
       }
@@ -137,6 +145,7 @@ VectorXd  Molecule::solve(MatrixXd A,  VectorXd b, int m){
   VectorXd y = VectorXd::Zero(m);
   VectorXd Pb = P*b;
 
+  #pragma parallel for schedule(guided)
   for (int i = 0; i < m; i++){
     double rhs = Pb(i);
     for (int j=0; j<i; j++){
@@ -145,6 +154,7 @@ VectorXd  Molecule::solve(MatrixXd A,  VectorXd b, int m){
     y(i) = rhs;
   }
 
+  #pragma parallel for schedule(static)
   for (int i=m-1; i>=0; i--){
     double rhs = y(i);
     for (int j=m-1; j> i; j--){
@@ -181,7 +191,7 @@ std::vector<std::tuple<int, int>> Molecule::matching(){
   b[0] = 1;
 
   //Set A
-  #pragma omp parallel for schedule(static)
+ #pragma omp parallel for schedule(static)
   for (int row=0; row<n; row++){
     for (int col=0; col<n; col++){
       A(row, col) = .1*graph[row][col];
@@ -192,6 +202,9 @@ std::vector<std::tuple<int, int>> Molecule::matching(){
   for (int i=0; i<n; i++){
     rc_map.push_back(i);
   }
+
+   //std::vector<int> mapIndtoIncl(matrix_size);
+     // std::vector<int> col_count(matrix_size);
 
   while (M.size() < n/2){
       VectorXd x = solve(A,b,matrix_size);
@@ -355,11 +368,13 @@ void Molecule::initializeGraph(){
   graph = vector<vector<double>>(N);
   augC = vector<vector<double>>(N);
 
+  #pragma parallel for schedule(static)
   for(int i=0; i<N; ++i){
     graph[i] =  vector<double>(N);
     augC[i] = vector<double>(2*N);
   }
-
+  
+  #pragma parallel for schedule(static)
   for (int j=0; j< N; j++){
     for (int k=0; k<N; k++){
       if (j==k){
