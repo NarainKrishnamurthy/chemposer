@@ -11,7 +11,6 @@ using namespace std;
 
 #define THREADS_PB 256
 
-__device__ double device_graph;
 __device__ double *A;
 __device__ double *P;
 __device__ double *L;
@@ -20,8 +19,6 @@ __device__ double *Pb;
 __device__ double *b;
 __device__ double *x;
 __device__ double *y;
-__device__ int *M1;
-__device__ int *M2;
 
 
 __global__ void kernelRowSwap(double *M, int start, int end, int k, int i, int N){
@@ -216,18 +213,16 @@ std::vector<std::tuple<int, int>> matching(std::vector<std::vector<double>> grap
   }
 
   
-  double* host_x = (double *)calloc(n, sizeof(double));
+  double* host_x = (double *) calloc(n, sizeof(double));
 
   while (M.size() < n/2){
       dim3 seqblockDim(1024,1,1);
       dim3 seqgridDim((1 + seqblockDim.x - 1)/seqblockDim.x,1,1);
 
-      kernelSequentialSolve<<<seqgridDim,seqblockDim>>>(matrix_size);
+      kernelSequentialSolve<<<1,1>>>(matrix_size);
       cudaThreadSynchronize();
       int row_j = -1;
       
-      //COpy x to host
-
       cudaMemcpy(host_x, x, matrix_size*sizeof(double), cudaMemcpyDeviceToHost);
 
       printf("returned x\n");
@@ -251,7 +246,6 @@ std::vector<std::tuple<int, int>> matching(std::vector<std::vector<double>> grap
 
       M.push_back(std::make_tuple(rc_map[0], rc_map[row_j]));
       int row_counter = 0;
-
 
       for (int i=0; i<matrix_size; i++){
         if (i != 0 && i != row_j){
@@ -285,6 +279,8 @@ std::vector<std::tuple<int, int>> setup(std::vector<std::vector<double>> host_gr
     cudaMalloc((void**)&U, sizeof(double)*N*N);
     cudaMalloc((void**)&Pb, sizeof(double)*N);
     cudaMalloc((void**)&b, N*sizeof(double));
+    cudaMalloc((void**)&x, N*sizeof(double));
+    cudaMalloc((void**)&y, N*sizeof(double));
 
     double *graph_oneD = (double *) calloc(N*N, sizeof(double));
     for (int i=0; i<N; i++){
@@ -324,6 +320,7 @@ std::vector<std::tuple<int, int>> setup(std::vector<std::vector<double>> host_gr
           printf("val: %.3e\n", val);
       }
     }*/
+
     return matching(host_graph, N, err);  
     //return std::vector<std::tuple<int, int>>();
 }
