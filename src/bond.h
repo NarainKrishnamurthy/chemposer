@@ -26,6 +26,12 @@ class Bond {
    return NULL;
  }
 
+ int firstID(){ return _start->id();}
+
+ int secondID(){ return _end->id();}
+
+ int getType() {return _type;}
+
  unsigned short type() { return _type; }
  void setType(unsigned short t) { _type = t; }
 

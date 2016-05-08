@@ -90,12 +90,15 @@ void Molecule::perceiveBonds() {
       cudaGraph[atom->id()*n + nbr->id()] = val;
       cudaGraph[nbr->id()*n + atom->id()] = -1.0*val;
       numedges++;
+
+      addBond(atom,nbr,1);
     } // end inner loop
   } // end outer loop
   setNumBonds(numedges);
   //printGraph();
 
 } // end perceiveBonds
+
 
 
 VectorXd  Molecule::solve(MatrixXd A,  VectorXd b, int m){
@@ -267,6 +270,32 @@ std::vector<std::tuple<int, int>> Molecule::matching(){
   printMatching(M);
   return M;
 }
+
+
+void Molecule::addMatchedBonds(std::vector<std::tuple<int, int>> M){
+
+    int sizeMatching = M.size();
+    std::map<int, int> matchingMap;
+    for(int i=0; i<sizeMatching; i++){
+        int a = std::get<0>(M[i]);
+        int b = std::get<1>(M[i]);
+        matchingMap.insert(std::pair<int,int>(a,b));
+    }
+
+    for(int j=0; j<_bonds.size(); j++){
+
+        int id_first = getfirst(j);
+        int id_second= getsecond(j);
+
+        int min = std::min(id_first,id_second);
+
+        if (matchingMap.count(min)==1){
+            update(j);
+        }
+    }
+
+}
+
 
 void Molecule::printMatching(std::vector<std::tuple<int, int>> M){
   for(auto it= M.begin(); it != M.end(); ++it){

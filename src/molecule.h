@@ -31,7 +31,7 @@ class Molecule {
  { Bond *bond = new Bond(a, b); bond->setType(type); _bonds.push_back(bond); }
 
  unsigned int numberOfAtoms() { return _atoms.size(); }
- unsigned int numberOfBonds() { return numBonds; }
+ unsigned int numberOfBonds() { return _bonds.size(); }
 
  std::vector<Atom*> atoms() { return _atoms; }
  std::vector<Bond*> bonds() { return _bonds; }
@@ -53,6 +53,30 @@ class Molecule {
  void printDeterminant();
  std::vector<std::tuple<int, int>> matching();
  VectorXd solve(MatrixXd A,  VectorXd b, int m);
+ void addMatchedBonds(std::vector<std::tuple<int, int>> M);
+
+ int getfirst(int i){
+     Bond *b = _bonds[i];
+     int firstID = b->firstID();
+     return firstID;
+ }
+
+
+ int getsecond(int i){
+     Bond *b = _bonds[i];
+     int secondID = b->secondID();
+     return secondID;
+ }
+
+ void update(int i){
+    _bonds[i]->setType(2);
+ }
+
+ void printBonds(){
+     for(auto it= _bonds.begin(); it != _bonds.end(); ++it){
+         printf("%d \n", (*it)->getType());
+     }
+ }
 
 
  protected:

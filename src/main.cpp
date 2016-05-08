@@ -33,10 +33,10 @@ int main (int argc, char *argv[])
     if (!readXYZ(mol, argv[a]))
       cout << "Cannot read the XYZ file" << endl;
 
-  
+
     clock_t begin = clock();
 
-   
+
     mol.initializeGraph();
 
 
@@ -49,8 +49,8 @@ int main (int argc, char *argv[])
 
     begin = clock();
 
-   
-    mol.perceiveBonds();  
+
+    mol.perceiveBonds();
 
     end = clock();
 
@@ -74,7 +74,7 @@ int main (int argc, char *argv[])
     for(int i=0; i<mol.numberOfAtoms(); i++){
       excl_rows.insert(std::pair<int,int>(i,1));
       excl_cols.insert(std::pair<int,int>(i,1));
-  
+
     }
 */
     //mol.inverse(&excl_cols, &excl_rows, &err);
@@ -91,14 +91,16 @@ int main (int argc, char *argv[])
 
     //taken from http://stackoverflow.com/questions/2808398/easily-measure-elapsed-time
     begin = clock();
+//    mol.CUDAMatching();
 
-    mol.CUDAMatching();
-
+    std::vector<std::tuple<int,int>> M = mol.matching();
     end = clock();
     elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
     /////
 
     printf("\n\nTime taken by matching function = %f\n\n", elapsed_secs);
+
+    mol.addMatchedBonds(M);
 
     std::vector<Atom*> atoms = mol.atoms();
     unsigned int j = 0;
@@ -108,6 +110,8 @@ int main (int argc, char *argv[])
         break;
       }
     } // end check loop
+
+    mol.printBonds();
 
     // write an SD output
     char *filename = argv[a];
