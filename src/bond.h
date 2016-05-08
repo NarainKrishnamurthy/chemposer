@@ -3,6 +3,7 @@
 #ifndef BOND_H
 #define BOND_H
 
+#include <cstddef>
 class Atom;
 
 class Bond {

@@ -1,9 +1,13 @@
 
 SRC := src
 SOURCES := $(wildcard src/*.cpp)
+NVSOURCES := $(wildcard src/*.cu)
 OBJS    := $(patsubst src/%,build/%,$(SOURCES:.cpp=.o))
-CC  = clang-omp
-CFLAGS = -Wall -Wextra -O2 -std=c++11 -fopenmp
+NVOBJS    := $(patsubst src/%,nvbuild/%,$(NVSOURCES:.cu=.o))
+NCC = nvcc
+GCC = g++
+NVFLAGS = -std=c++11 -O2
+CFLAGS = -Wall -Wextra -O2 -std=c++11
 EXEC_NAME = chemposer
 
 
@@ -13,15 +17,19 @@ EXEC_NAME = chemposer
 
 all: $(EXEC_NAME)
 
-$(EXEC_NAME): dirs $(OBJS)
-	$(CC) $(CFLAGS) -o $(EXEC_NAME) $(OBJS) -lc++
+$(EXEC_NAME): dirs $(OBJS) $(NVOBJS)
+	$(NCC) $(NVFLAGS) -o $(EXEC_NAME) $(OBJS) $(NVOBJS)
 
 build/%.o: $(SRC)/%.cpp
-	$(CC) $(CFLAGS) -c $< -o $@
-			
+	$(GCC) $(CFLAGS) -c $< -o $@
+
+nvbuild/%.o: $(SRC)/%.cu
+	$(NCC) $(NVFLAGS) -c $< -o $@
+
+
 dirs:
-	mkdir -p build
+	mkdir -p build nvbuild
 
 clean:
-	rm -rf $(EXEC_NAME) build
+	rm -rf $(EXEC_NAME) build nvbuild
 
