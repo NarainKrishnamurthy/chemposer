@@ -6,6 +6,8 @@
 #include <thrust/device_ptr.h>
 #include "molecule.h"
 #include <vector>
+#include <thrust/reduce.h>
+#include <thrust/device_vector.h>
 
 using namespace std;
 
@@ -21,20 +23,22 @@ __device__ double *x;
 __device__ double *y;
 
 
-__global__ void kernelRowSwap(double *M, int start, int end, int k, int i, int N){
-    int threadIndex = blockDim.x*blockIdx.x + threadIdx.x;
+__global__ void kernelRowSwap(double *M, int start, int end, int k, int* i_ptr, int N){
+    
+    int i = *i_ptr;
+    int col = blockDim.x*blockIdx.x + threadIdx.x;
 
-    if (threadIndex >= (start - end))
+    if (col < start || col >= end)
         return;
 
-    double temp = M[k*N + start + threadIndex];
-    M[k*N + start + threadIndex] = M[i*N + start + threadIndex];
-    M[i*N + start + threadIndex] = temp;
+    double temp = M[k*N + col];
+    M[k*N + col] = M[i*N + col];
+    M[i*N + col] = temp;
 }
 
 
 
-__global__ void kernelSetLURow(int k, int N){
+__global__ void kernelSetLU(double *L, double *U, int k, int N){
     int j = blockDim.x*blockIdx.x + threadIdx.x;
 
     if (j >= N || j<k+1)
@@ -47,17 +51,18 @@ __global__ void kernelSetLURow(int k, int N){
 }
 
 
-__global__ void kernelMakeIdentity(double *I, int N){
+__global__ void kernelInitLP(double *L, double *P, int N){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
 
     if (i >= N || j >= N)
         return;
 
-    I[i*N+j] = (i==j) ? 1.0 : 0.0;
+    L[i*N+j] = (i==j) ? 1.0 : 0.0;
+    P[i*N+j] = (i==j) ? 1.0 : 0.0;
 }
 
-__global__ void copyAtoU(int N){
+__global__ void kernelcopyAtoU(double *A, double *U, int N){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -85,7 +90,7 @@ __global__ void kernelresizeA(double *A, int row_counter, int i, int row_j, int 
 }
 
 
-__global__ void kernelSetPb(int N){
+__global__ void kernelSetPb(double *Pb, double *P, int N){
     int i = blockDim.x*blockIdx.x + threadIdx.x;
     if (i >= N)
         return;
@@ -103,6 +108,15 @@ __global__ void kernelSetb(double *b, int N){
         return;
 
     b[i] = (i==0) ? 1.0 : 0.0;
+}
+
+__global__ void kernelResetxy(double *x, double *y, int N){
+    int i = blockDim.x*blockIdx.x + threadIdx.x;
+    if (i >= N)
+        return;
+
+    x[i] = 0.0;
+    y[i] = 0.0;
 }
 
 __global__ void kernelCopyRowA(double* row, int i, int N){
@@ -212,6 +226,120 @@ __global__ void  kernelSequentialSolve(double *A, double *L, double *U, double *
   }
 }
 
+__global__ void kernelGetMaxUk(double *U, int k, int* i, int N){
+  double max = -1.0;
+  *i = -1;
+  for (int row = k; row<N; row++){
+    if (abs(U[row*N+k]) > max){
+      *i = row;
+      max = abs(U[row*N+k]);
+    }
+  }
+}
+
+__global__ void kernelForwardMap(double *temp, double *L, double *y, int i, int N){
+  int j = blockDim.x*blockIdx.x + threadIdx.x;
+  if (j>= i)
+    return;
+
+  temp[j] = L[i*N+j]*y[j];
+}
+
+__global__ void kernelForwardSolve(double* Pb, double *y, double result, int i, int N){
+
+  double rhs = Pb[i];
+  rhs -= result;
+  y[i] = rhs;
+}
+
+
+__global__ void kernelSequentialHelpAfter(double *A, double *L, double *U, double *P,
+  double *Pb, double *b, double *x, double *y, int N){
+
+  for (int i = 0; i < N; i++){
+    double rhs = Pb[i];
+    for (int j=0; j<i; j++){
+      rhs -= L[i*N+j]*y[j];
+    }
+    y[i] = rhs;
+  }
+
+  for (int i=N-1; i>=0; i--){
+    double rhs = y[i];
+
+    for (int j=N-1; j> i; j--){
+      rhs -= U[i*N+j]*x[j];
+    }
+    x[i] = rhs/U[i*N+i];
+  }
+}
+
+void solve(int N){
+  
+  dim3 blockDimVector(1024,1,1);
+  dim3 gridDimVector((N + blockDimVector.x - 1)/blockDimVector.x,1,1);
+
+  dim3 blockDimArray(1024,1,1);
+  dim3 gridDimArray((N + blockDimArray.x - 1)/blockDimArray.x,1,1);
+
+  blockDimArray.x = 32;
+  blockDimArray.y = 32;
+  gridDimArray.x = (N + blockDimArray.x -1)/ blockDimArray.x;
+  gridDimArray.y = (N + blockDimArray.y -1)/ blockDimArray.y;
+
+  kernelcopyAtoU<<<gridDimArray, blockDimArray>>>(A,U,N);
+  cudaThreadSynchronize();
+
+  kernelInitLP<<<gridDimArray, blockDimArray>>>(L,P,N);
+  cudaThreadSynchronize();
+
+  for (int k=0; k<N-1; k++){
+    int *i;
+    cudaMalloc((void**)&i, sizeof(int));
+
+    kernelGetMaxUk<<<1, 1>>>(U,k,i,N);
+    cudaThreadSynchronize();
+    
+    kernelRowSwap<<<gridDimVector, blockDimVector>>>(U, k, N, k,i, N);
+    cudaThreadSynchronize();
+
+    kernelRowSwap<<<gridDimVector, blockDimVector>>>(L, 0, k, k,i, N);
+    cudaThreadSynchronize();
+
+    kernelRowSwap<<<gridDimVector, blockDimVector>>>(P, 0, N, k,i, N);
+    cudaThreadSynchronize();
+
+    cudaFree(i);
+    kernelSetLU<<<gridDimVector, blockDimVector>>>(L,U,k,N);
+    cudaThreadSynchronize();
+  }
+
+  kernelResetxy<<<gridDimVector, blockDimVector>>>(x,y,N);
+  cudaThreadSynchronize();
+
+  kernelSetPb<<<gridDimVector, blockDimVector>>>(Pb, P, N);
+  cudaThreadSynchronize();
+
+  /*
+  double *temp;
+  cudaMalloc((void**)&temp, N*sizeof(double));
+
+  thrust::device_ptr<double> dev_ptr(temp);
+
+  for (int i=0; i<N;i++){
+    kernelForwardMap<<<gridDimVector, blockDimVector>>>(temp, L, y, i,N);
+    cudaThreadSynchronize();
+
+    double result = thrust::reduce(dev_ptr, dev_ptr + i);
+
+    kernelForwardSolve<<<1,1>>>(Pb,y,result,i,N);
+    cudaThreadSynchronize();
+  }
+  cudaFree(temp);*/
+
+  kernelSequentialHelpAfter<<<1,1>>>(A,L,U,P,Pb,b,x,y,N);
+  cudaThreadSynchronize();
+}
 
 
 std::vector<std::tuple<int, int>> matching(std::vector<std::vector<double>> graph, int n, double err){
@@ -224,23 +352,15 @@ std::vector<std::tuple<int, int>> matching(std::vector<std::vector<double>> grap
     rc_map.push_back(i);
   }
 
-  
   double* host_x = (double *) calloc(n, sizeof(double));
   while (M.size() < n/2){
-      dim3 seqblockDim(1024,1,1);
-      dim3 seqgridDim((1 + seqblockDim.x - 1)/seqblockDim.x,1,1);
-
-      kernelSequentialSolve<<<1,1>>>(A,L,U,P,Pb,b,x,y,matrix_size);
-      cudaThreadSynchronize();
+      //kernelSequentialSolve<<<1,1>>>(A,L,U,P,Pb,b,x,y,matrix_size);
+      //cudaThreadSynchronize();
+      solve(matrix_size);
 
       int row_j = -1;
       cudaMemcpy(host_x, x, matrix_size*sizeof(double), cudaMemcpyDeviceToHost);
 
-      /*
-      printf("returned x\n");
-      for (int i=0; i<matrix_size; i++)
-        printf("%f\n", host_x[i]);
-*/
       for (int row=0; row< matrix_size; row++){
         int true_first_col = rc_map[0];
         int true_row = rc_map[row];
@@ -290,7 +410,6 @@ std::vector<std::tuple<int, int>> setup(std::vector<std::vector<double>> host_gr
     dim3 blockDim(1024,1,1);
     dim3 gridDim((N + blockDim.x - 1)/blockDim.x,1,1);
 
-
     cudaMalloc((void**)&A, N*N*sizeof(double));
     cudaMalloc((void**)&P, sizeof(double)*N*N);
     cudaMalloc((void**)&L, sizeof(double)*N*N);
@@ -320,14 +439,6 @@ std::vector<std::tuple<int, int>> setup(std::vector<std::vector<double>> host_gr
     gridDim.y = (N + blockDim.y -1)/ blockDim.y;
 
     kernelScaleA<<<gridDim, blockDim>>>(A,N);    
-    /*
-    double *b_host = (double *)calloc(N, sizeof(double)); 
-    cudaMemcpy(b_host, b, N*sizeof(double), cudaMemcpyDeviceToHost);
-
-    for (int i=0; i<N; i++){
-      printf("b_host: %.3e\n", b_host[i]);
-    }*/
-
     return matching(host_graph, N, err);  
     //return std::vector<std::tuple<int, int>>();
 }
