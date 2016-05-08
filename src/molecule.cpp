@@ -3,6 +3,8 @@
 #include "molecule.h"
 #include <random>
 #include <iostream>
+//#include <cuda_runtime.h>
+//#include <cuda.h>
 
 
 using namespace std;
@@ -77,14 +79,16 @@ void Molecule::perceiveBonds() {
       if (d2 < 0.16) // 0.4 * 0.4 = 0.16
         continue; // too close
 
-      
+
       double val = (double) dis(gen);
       if (atom->id() > nbr->id()){
          val = -1.0 * val;
-      } 
+      }
       graph[atom->id()][nbr->id()] = val;
       graph[nbr->id()][atom->id()] = -1.0*val;
 
+      cudaGraph[atom->id()*n + nbr->id()] = val;
+      cudaGraph[nbr->id()*n + atom->id()] = -1.0*val;
       numedges++;
     } // end inner loop
   } // end outer loop
@@ -214,11 +218,6 @@ std::vector<std::tuple<int, int>> Molecule::matching(){
   while (M.size() < n/2){
       VectorXd x = solve(A,b,matrix_size);
       int row_j = -1;
-      
-      printf("printing x\n");
-      for (int i=0; i<matrix_size; i++){
-        printf("%f\n", x(i));
-      }
 
       for (int row=0; row< matrix_size; row++){
         int true_first_col = rc_map[0];
@@ -246,8 +245,8 @@ std::vector<std::tuple<int, int>> Molecule::matching(){
           int counter_col=0;
           for (int j=0; j<matrix_size; j++){
             if (j!=0 && j!=row_j){
-              //A(row_counter, col_count[j]-1) = A_copy(i,j);    
-              A(row_counter, counter_col) = A_copy(i,j);   
+              //A(row_counter, col_count[j]-1) = A_copy(i,j);
+              A(row_counter, counter_col) = A_copy(i,j);
               counter_col++;
             }
           }
@@ -351,12 +350,15 @@ void Molecule::initializeGraph(){
 
   int N = numberOfAtoms();
   graph = vector<vector<double>>(N);
+//  cudaMallocHost((void**)cudaGraph,N*N);
+
+  cudaGraph = (double *)malloc(N*N*sizeof(double));
 
   //#pragma parallel for schedule(static)
   for(int i=0; i<N; ++i){
     graph[i] =  vector<double>(N);
   }
-  
- 
+
+
 }
 

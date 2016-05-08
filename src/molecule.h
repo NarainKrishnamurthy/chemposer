@@ -4,7 +4,7 @@
 #define MOLECULE_H
 
 #include <vector>
-#include <cmath> 
+#include <cmath>
 
 #include "atom.h"
 #include "bond.h"
@@ -37,7 +37,7 @@ class Molecule {
  std::vector<Bond*> bonds() { return _bonds; }
 
  void clear() { _atoms.clear(); _bonds.clear(); }
- 
+
  void setNumBonds(unsigned num){
  	numBonds = num;
  }
@@ -58,6 +58,7 @@ class Molecule {
  protected:
   std::vector<Atom*> _atoms;
   std::vector<Bond*> _bonds;
+  double *cudaGraph;
   unsigned int numBonds;
   std::vector<std::vector<double>> graph;
   std::vector<std::vector<double>> augC;
