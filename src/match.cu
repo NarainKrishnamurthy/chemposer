@@ -12,9 +12,9 @@ using namespace std;
 #define THREADS_PB 256
 
 __device__ double *A;
-__device__ double *P;
 __device__ double *L;
 __device__ double *U;
+__device__ double *P;
 __device__ double *Pb;
 __device__ double *b;
 __device__ double *x;
@@ -69,7 +69,7 @@ __global__ void copyAtoU(int N){
 
 
 //REQUIRES: row_counter < i
-__global__ void kernelresizeA(int row_counter, int i, int row_j, int N){
+__global__ void kernelresizeA(double *A, int row_counter, int i, int row_j, int N){
     int new_size = N-2;
     int j = blockDim.x*blockIdx.x + threadIdx.x;
 
@@ -97,12 +97,12 @@ __global__ void kernelSetPb(int N){
     }
 }
 
-__global__ void kernelSetb(int N){
+__global__ void kernelSetb(double *b, int N){
     int i = blockDim.x*blockIdx.x + threadIdx.x;
     if (i >= N)
         return;
 
-    b[i] = (i == 0) ? 1.0 : 0.0;
+    b[i] = (i==0) ? 1.0 : 0.0;
 }
 
 __global__ void kernelCopyRowA(double* row, int i, int N){
@@ -112,7 +112,19 @@ __global__ void kernelCopyRowA(double* row, int i, int N){
 
   A[i*N + j] = row[j];
 }
-__global__ void  kernelSequentialSolve(int N){
+
+__global__ void kernelScaleA(double *A, int N){
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (i >= N || j >= N)
+        return;
+
+    A[i*N+j] = .01*A[i*N+j];
+}
+
+__global__ void  kernelSequentialSolve(double *A, double *L, double *U, double *P,
+  double *Pb, double *b, double *x, double *y, int N){
 
 
   for (int i=0; i<N; i++)
@@ -214,15 +226,14 @@ std::vector<std::tuple<int, int>> matching(std::vector<std::vector<double>> grap
 
   
   double* host_x = (double *) calloc(n, sizeof(double));
-
   while (M.size() < n/2){
       dim3 seqblockDim(1024,1,1);
       dim3 seqgridDim((1 + seqblockDim.x - 1)/seqblockDim.x,1,1);
 
-      kernelSequentialSolve<<<1,1>>>(matrix_size);
+      kernelSequentialSolve<<<1,1>>>(A,L,U,P,Pb,b,x,y,matrix_size);
       cudaThreadSynchronize();
+
       int row_j = -1;
-      
       cudaMemcpy(host_x, x, matrix_size*sizeof(double), cudaMemcpyDeviceToHost);
 
       printf("returned x\n");
@@ -253,7 +264,7 @@ std::vector<std::tuple<int, int>> matching(std::vector<std::vector<double>> grap
           dim3 blockDim(1024,1,1);
           dim3 gridDim((matrix_size + blockDim.x - 1)/blockDim.x,1,1);
 
-          kernelresizeA<<<gridDim, blockDim>>>(row_counter, i, row_j, matrix_size);
+          kernelresizeA<<<gridDim, blockDim>>>(A, row_counter, i, row_j, matrix_size);
           cudaThreadSynchronize();
           row_counter++;
         }
@@ -282,6 +293,9 @@ std::vector<std::tuple<int, int>> setup(std::vector<std::vector<double>> host_gr
     cudaMalloc((void**)&x, N*sizeof(double));
     cudaMalloc((void**)&y, N*sizeof(double));
 
+    kernelSetb<<<gridDim, blockDim>>>(b, N);
+    cudaThreadSynchronize();
+
     double *graph_oneD = (double *) calloc(N*N, sizeof(double));
     for (int i=0; i<N; i++){
       for (int j=0; j<N; j++){
@@ -291,34 +305,20 @@ std::vector<std::tuple<int, int>> setup(std::vector<std::vector<double>> host_gr
 
     cudaMemcpy(A, graph_oneD, N*N*sizeof(double), cudaMemcpyHostToDevice); 
     free(graph_oneD);
-    /*
-    double* A_host = (double *) calloc(N*N, sizeof(double));
-    cudaMemcpy(A_host, A, N*N*sizeof(double), cudaMemcpyDeviceToHost);
-    for (int i=0; i<N; i++){
-      for (int j=0; j<N; j++){
-        if (A_host[i*N+j]!=host_graph[i][j]){
-          printf("(%d,%d) don't match\n", i,j);
-          printf("A_host: %.3e\n", A_host[i*N+j]);
-          printf("graph: %.3e\n", host_graph[i][j]);
-        }
-      }
-    }*/
 
-    double *b_host = (double *) calloc(N,sizeof(double));
-    b_host[0] = 1.0;
-    cudaMemcpy(b, b_host, N*sizeof(double), cudaMemcpyHostToDevice);
-    free(b_host);
+    blockDim.x = 32;
+    blockDim.y = 32;
 
+    gridDim.x = (N + blockDim.x -1)/ blockDim.x;
+    gridDim.y = (N + blockDim.y -1)/ blockDim.y;
+
+    kernelScaleA<<<gridDim, blockDim>>>(A,N);    
     /*
+    double *b_host = (double *)calloc(N, sizeof(double)); 
     cudaMemcpy(b_host, b, N*sizeof(double), cudaMemcpyDeviceToHost);
 
     for (int i=0; i<N; i++){
-      double val = (i==0) ? 1.0 : 0.0;
-      if (b_host[i]!=val){
-          printf("(%d) doesn't match\n", i);
-          printf("b_host: %.3e\n", b_host[i]);
-          printf("val: %.3e\n", val);
-      }
+      printf("b_host: %.3e\n", b_host[i]);
     }*/
 
     return matching(host_graph, N, err);  

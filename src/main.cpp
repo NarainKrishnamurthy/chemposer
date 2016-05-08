@@ -92,9 +92,7 @@ int main (int argc, char *argv[])
     //taken from http://stackoverflow.com/questions/2808398/easily-measure-elapsed-time
     begin = clock();
 
-   // mol.matching();
     mol.CUDAMatching();
-    //mol.matching();
 
     end = clock();
     elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
