@@ -1,0 +1,23 @@
+Notes -
+
+Using GHC 41 - 
+
+Initial N^3 implemetation with small optimization. At 12 pm. 
+
+20   - 0.18 s
+24   - 0.19 s
+26   - 0.18 s
+32   - 0.21 s
+36   - 0.22 s
+50   - 0.30 s
+60   - 0.60 s
+70   - 0.55 s
+80   - 0.83 s
+180  -  14.66 s
+240  -  41.02 s
+260  -  55.81 s
+500  -  Didnt finish
+
+
+
+
