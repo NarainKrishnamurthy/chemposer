@@ -4,8 +4,11 @@
 #include <random>
 #include <iostream>
 
+
 using namespace std;
 using namespace Eigen;
+
+extern std::vector<std::tuple<int, int>> setup(std::vector<std::vector<double>> host_graph, int N, int err);
 
 bool sortAtomZ(const pair<Atom*,double> &a, const pair<Atom*,double> &b)
 {   return (a.second < b.second); }
@@ -81,9 +84,6 @@ void Molecule::perceiveBonds() {
       } 
       graph[atom->id()][nbr->id()] = val;
       graph[nbr->id()][atom->id()] = -1.0*val;
-
-      augC[atom->id()][nbr->id()] = val;
-      augC[nbr->id()][atom->id()] = -1.0*val;
 
       numedges++;
     } // end inner loop
@@ -179,6 +179,13 @@ VectorXd  Molecule::solve(MatrixXd A,  VectorXd b, int m){
 }
 
 
+std::vector<std::tuple<int, int>> Molecule::CUDAMatching(){
+  unsigned int n = numberOfAtoms();
+  std::vector<std::tuple<int, int>> M = setup(graph, n, err);
+  printMatching(M);
+  return std::vector<tuple<int,int>>();
+}
+
 std::vector<std::tuple<int, int>> Molecule::matching(){
 
   unsigned int n = numberOfAtoms();
@@ -207,6 +214,11 @@ std::vector<std::tuple<int, int>> Molecule::matching(){
       VectorXd x = solve(A,b,matrix_size);
       int row_j = -1;
       
+      printf("printing x\n");
+      for (int i=0; i<matrix_size; i++){
+        printf("%f\n", x(i));
+      }
+
       for (int row=0; row< matrix_size; row++){
         int true_first_col = rc_map[0];
         int true_row = rc_map[row];
@@ -338,101 +350,12 @@ void Molecule::initializeGraph(){
 
   int N = numberOfAtoms();
   graph = vector<vector<double>>(N);
-  augC = vector<vector<double>>(N);
 
   //#pragma parallel for schedule(static)
   for(int i=0; i<N; ++i){
     graph[i] =  vector<double>(N);
-    augC[i] = vector<double>(2*N);
   }
   
-  //#pragma parallel for schedule(static)
-  for (int j=0; j< N; j++){
-    for (int k=0; k<N; k++){
-      if (j==k){
-        augC[j][k+N] = 1;
-      }
-    }
-  }
+ 
 }
 
-/*
-void Molecule::inverse(std::vector<std::vector<double>> &C, int N, std::map<int, int> excl){
-  
-
-  double err_power = err*(((double) 4*excl.size())/((double) N)+10.0);
-  err_power = .0000000000001;
-  printf("err_power: %.3e\n", err_power);
-
-
-
-  int j = 0;
-  while (j<N){
-    
-    if (excl.count(j)>0){
-      j += 1;
-      continue;
-    }
-
-
-    if (j % 10 == 0){
-      for (int r=j+1; r<N;r++){
-        for(int c=0; c<N; c++){
-          C[r][c]  = C[r][c]*1000;
-        }
-      }
-    }
-
-
-    if (std::abs(C[j][j]) < err){
-      int k = -1;
-
-      for(int new_col=j+1; new_col<N; new_col++){
-        if (excl.count(new_col) == 0 && std::abs(C[new_col][j]) > 0){
-          k = new_col;
-          break;
-        }
-      }
-
-      if (k==-1){
-        printf("k is -1 \n");
-        printf("j: %d\n", j);
-        for(int new_col=j+1; new_col<N; new_col++){
-          printf("in excl: %s value: %.4e above err: %s\n", excl.count(new_col) == 0 ? "true" : "false", 
-            C[new_col][j],
-            std::abs(C[new_col][j]) > err ? "true" : "false");
-        }
-      }
-
-      for(int row=0; row<2*N; row++){
-        if (excl.count(row) == 0){
-          C[j][row] = C[j][row] + C[k][row],prime;
-        }
-      }
-    }
-
-    double ajj = C[j][j];
-
-    for(int row=0; row<2*N; row++){
-      if (excl.count(row) == 0)
-        C[j][row] = C[j][row]/ajj, prime;
-    }
-
-    for(int col=0; col < N; col++){
-      if ((col !=j) && excl.count(col)==0){
-
-        double aij = C[col][j];
-
-        for(int row=0;row<2*N;row++){
-          if (excl.count(row) ==0){
-            C[col][row] = C[col][row] - aij*C[j][row], prime;
-          }
-        }
-      }
-    }
-    j++;
-  }
-}
-
-
-*/

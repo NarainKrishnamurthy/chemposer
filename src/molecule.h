@@ -8,6 +8,7 @@
 
 #include "atom.h"
 #include "bond.h"
+//#include "match.h"
 #include <map>
 #include "Eigen/Dense"
 
@@ -46,6 +47,7 @@ class Molecule {
  void printMolecule();
  void printGraph();
  void initializeGraph();
+ std::vector<std::tuple<int, int>> CUDAMatching();
  void printMatrix(std::vector<std::vector<double>> A);
  void printAugMatrix();
  void printDeterminant();
