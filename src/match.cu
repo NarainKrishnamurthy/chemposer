@@ -120,7 +120,7 @@ __global__ void kernelScaleA(double *A, int N){
     if (i >= N || j >= N)
         return;
 
-    A[i*N+j] = .01*A[i*N+j];
+    A[i*N+j] = A[i*N+j];
 }
 
 __global__ void  kernelSequentialSolve(double *A, double *L, double *U, double *P,
@@ -236,10 +236,11 @@ std::vector<std::tuple<int, int>> matching(std::vector<std::vector<double>> grap
       int row_j = -1;
       cudaMemcpy(host_x, x, matrix_size*sizeof(double), cudaMemcpyDeviceToHost);
 
+      /*
       printf("returned x\n");
       for (int i=0; i<matrix_size; i++)
         printf("%f\n", host_x[i]);
-
+*/
       for (int row=0; row< matrix_size; row++){
         int true_first_col = rc_map[0];
         int true_row = rc_map[row];
@@ -254,7 +255,12 @@ std::vector<std::tuple<int, int>> matching(std::vector<std::vector<double>> grap
         printf("matching size = %d\n", M.size());
         return std::vector<std::tuple<int, int>>();
       }
-
+      /*
+      printf("\nnew edge: (%d, %d)\n", 0, row_j);
+      printf("host_x[row]: %.3e\n", host_x[row_j]);
+      printf("host abs condition: %s\n", fabs(host_x[row_j]) > err ? "true" : "false");
+      printf("graph edge: %.3e\n", graph[rc_map[row_j]][rc_map[0]]);
+  */
       M.push_back(std::make_tuple(rc_map[0], rc_map[row_j]));
       int row_counter = 0;
 
@@ -278,8 +284,9 @@ std::vector<std::tuple<int, int>> matching(std::vector<std::vector<double>> grap
 }
 
 
-std::vector<std::tuple<int, int>> setup(std::vector<std::vector<double>> host_graph, int N, int err){
+std::vector<std::tuple<int, int>> setup(std::vector<std::vector<double>> host_graph, int N, double err){
     
+    printf("error bound is: %.3e\n\n", err);
     dim3 blockDim(1024,1,1);
     dim3 gridDim((N + blockDim.x - 1)/blockDim.x,1,1);
 

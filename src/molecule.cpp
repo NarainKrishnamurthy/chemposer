@@ -8,7 +8,7 @@
 using namespace std;
 using namespace Eigen;
 
-extern std::vector<std::tuple<int, int>> setup(std::vector<std::vector<double>> host_graph, int N, int err);
+extern std::vector<std::tuple<int, int>> setup(std::vector<std::vector<double>> host_graph, int N, double  err);
 
 bool sortAtomZ(const pair<Atom*,double> &a, const pair<Atom*,double> &b)
 {   return (a.second < b.second); }
@@ -181,6 +181,7 @@ VectorXd  Molecule::solve(MatrixXd A,  VectorXd b, int m){
 
 std::vector<std::tuple<int, int>> Molecule::CUDAMatching(){
   unsigned int n = numberOfAtoms();
+  printf("Error in mol.cpp: %.3e\n", err);
   std::vector<std::tuple<int, int>> M = setup(graph, n, err);
   printMatching(M);
   return std::vector<tuple<int,int>>();

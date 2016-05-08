@@ -1,1 +1,1 @@
-std::vector<std::tuple<int, int>> setup(std::vector<std::vector<double>> host_graph, int N, int err);
+std::vector<std::tuple<int, int>> setup(std::vector<std::vector<double>> host_graph, int N, double err);
