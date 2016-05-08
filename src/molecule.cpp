@@ -10,7 +10,7 @@
 using namespace std;
 using namespace Eigen;
 
-extern std::vector<std::tuple<int, int>> setup(std::vector<std::vector<double>> host_graph, int N, double  err);
+extern std::vector<std::tuple<int, int>> setup(double *cudaGraph, vector<vector<double>> host_graph, int N, double  err);
 
 bool sortAtomZ(const pair<Atom*,double> &a, const pair<Atom*,double> &b)
 {   return (a.second < b.second); }
@@ -186,7 +186,7 @@ VectorXd  Molecule::solve(MatrixXd A,  VectorXd b, int m){
 std::vector<std::tuple<int, int>> Molecule::CUDAMatching(){
   unsigned int n = numberOfAtoms();
   printf("Error in mol.cpp: %.3e\n", err);
-  std::vector<std::tuple<int, int>> M = setup(graph, n, err);
+  std::vector<std::tuple<int, int>> M = setup(cudaGraph, graph, n, err);
   printMatching(M);
   return std::vector<tuple<int,int>>();
 }
@@ -352,7 +352,7 @@ void Molecule::initializeGraph(){
   graph = vector<vector<double>>(N);
 //  cudaMallocHost((void**)cudaGraph,N*N);
 
-  cudaGraph = (double *)malloc(N*N*sizeof(double));
+  cudaGraph = (double *)calloc(N*N, sizeof(double));
 
   //#pragma parallel for schedule(static)
   for(int i=0; i<N; ++i){

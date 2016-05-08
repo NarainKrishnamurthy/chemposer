@@ -119,7 +119,7 @@ __global__ void kernelResetxy(double *x, double *y, int N){
     y[i] = 0.0;
 }
 
-__global__ void kernelCopyRowA(double* row, int i, int N){
+__global__ void kernelCopyRowA(double *A, double* row, int i, int N){
   int j = blockDim.x*blockIdx.x + threadIdx.x;
   if (j>= N)
     return;
@@ -136,96 +136,6 @@ __global__ void kernelScaleA(double *A, int N){
 
     A[i*N+j] = A[i*N+j];
 }
-
-__global__ void  kernelSequentialSolve(double *A, double *L, double *U, double *P,
-  double *Pb, double *b, double *x, double *y, int N){
-
-
-  for (int i=0; i<N; i++)
-    for (int j=0; j<N; j++)
-      U[i*N + j] = A[i*N + j];
-  
-  for (int i=0; i<N; i++){
-    for (int j=0; j<N; j++){
-      if (i==j){
-        L[i*N + j] = 1.0;
-        P[i*N + j] = 1.0;
-      } else {
-        L[i*N + j] = 0.0;
-        P[i*N + j] = 0.0;
-      }
-    }
-  }
-
-  for (int k=0; k<N-1; k++){
-    int i = -1;
-    double max = -1;
-
-    for (int row = k; row<N; row++){
-      if (abs(U[row*N + k]) > max){
-        i = row;
-        max = abs(U[row*N+k]);
-      }
-    }
-
-    for (int col=k; col<N; col++){
-        double temp = U[k*N+col];
-        U[k*N+col] = U[i*N+col];
-        U[i*N+col] = temp;
-    }
-
-    for (int col=0; col<k; col++){
-        double temp = L[k*N+col];
-        L[k*N+col] = L[i*N+col];
-        L[i*N+col] = temp;
-    }
-
-    for (int col=0; col<N; col++){
-        double temp = P[k*N+col];
-        P[k*N+col] = P[i*N+col];
-        P[i*N+col] = temp;
-    }
-
-    for (int j=k+1; j<N; j++){
-      L[j*N+k] = U[j*N+k]/U[k*N+k];
-      for (int col=k; col<N; col++){
-        U[j*N+col] = U[j*N+col] - L[j*N+k]*U[k*N+col];
-      }
-    }
-  }
-
-  for (int i=0; i<N; i++){
-    x[i] = 0.0;
-    y[i] = 0.0;
-  }
-
-  for (int i=0; i<N; i++){
-    if (P[i*N] == 1.0){
-      Pb[i] = 1.0;
-    } else {
-      Pb[i] = 0.0;
-    }
-  }
-
-  for (int i = 0; i < N; i++){
-    double rhs = Pb[i];
-
-    for (int j=0; j<i; j++){
-      rhs -= L[i*N+j]*y[j];
-    }
-    y[i] = rhs;
-  }
-
-  for (int i=N-1; i>=0; i--){
-    double rhs = y[i];
-
-    for (int j=N-1; j> i; j--){
-      rhs -= U[i*N+j]*x[j];
-    }
-    x[i] = rhs/U[i*N+i];
-  }
-}
-
 __global__ void kernelGetMaxUk(double *U, int k, int* i, int N){
   double max = -1.0;
   *i = -1;
@@ -342,7 +252,7 @@ void solve(int N){
 }
 
 
-std::vector<std::tuple<int, int>> matching(std::vector<std::vector<double>> graph, int n, double err){
+std::vector<std::tuple<int, int>> matching(double* graph, int n, double err){
 
   int matrix_size = n;
   std::vector<std::tuple<int, int>> M = std::vector<std::tuple<int, int>>();
@@ -352,7 +262,10 @@ std::vector<std::tuple<int, int>> matching(std::vector<std::vector<double>> grap
     rc_map.push_back(i);
   }
 
-  double* host_x = (double *) calloc(n, sizeof(double));
+  double *host_x;
+  cudaMallocHost((void **) &host_x, n*sizeof(double));
+
+  //double* host_x = (double *) calloc(n, sizeof(double));
   while (M.size() < n/2){
       //kernelSequentialSolve<<<1,1>>>(A,L,U,P,Pb,b,x,y,matrix_size);
       //cudaThreadSynchronize();
@@ -364,7 +277,7 @@ std::vector<std::tuple<int, int>> matching(std::vector<std::vector<double>> grap
       for (int row=0; row< matrix_size; row++){
         int true_first_col = rc_map[0];
         int true_row = rc_map[row];
-        if (abs(host_x[row]) > err && graph[true_row][true_first_col]!=0){
+        if (abs(host_x[row]) > err && graph[true_row*n + true_first_col]!=0){
           row_j = row;
           break;
         }
@@ -395,7 +308,6 @@ std::vector<std::tuple<int, int>> matching(std::vector<std::vector<double>> grap
           row_counter++;
         }
       }
-
       matrix_size -= 2;
       rc_map.erase(rc_map.begin() + row_j);
       rc_map.erase(rc_map.begin());
@@ -403,8 +315,7 @@ std::vector<std::tuple<int, int>> matching(std::vector<std::vector<double>> grap
   return M;
 }
 
-
-std::vector<std::tuple<int, int>> setup(std::vector<std::vector<double>> host_graph, int N, double err){
+std::vector<std::tuple<int, int>> setup(double *cudaGraph, vector<vector<double>> host_graph, int N, double err){
     
     printf("error bound is: %.3e\n\n", err);
     dim3 blockDim(1024,1,1);
@@ -422,92 +333,101 @@ std::vector<std::tuple<int, int>> setup(std::vector<std::vector<double>> host_gr
     kernelSetb<<<gridDim, blockDim>>>(b, N);
     cudaThreadSynchronize();
 
-    double *graph_oneD = (double *) calloc(N*N, sizeof(double));
-    for (int i=0; i<N; i++){
-      for (int j=0; j<N; j++){
-        graph_oneD[i*N+j] = host_graph[i][j];
-      }
-    }
-
-    cudaMemcpy(A, graph_oneD, N*N*sizeof(double), cudaMemcpyHostToDevice); 
-    free(graph_oneD);
-
-    blockDim.x = 32;
-    blockDim.y = 32;
-
-    gridDim.x = (N + blockDim.x -1)/ blockDim.x;
-    gridDim.y = (N + blockDim.y -1)/ blockDim.y;
-
-    kernelScaleA<<<gridDim, blockDim>>>(A,N);    
-    return matching(host_graph, N, err);  
-    //return std::vector<std::tuple<int, int>>();
+    cudaMemcpy(A, cudaGraph, N*N*sizeof(double), cudaMemcpyHostToDevice);
+    return matching(cudaGraph, N, err);  
 }
 
 /*
-    kernelRowSwap<<<gridDim, blockDim>>>(A,start,end,k,i,N);
-    kernelSetLURow<<<gridDim, blockDim>>>(k,  N);    
-    kernelMakeIdentity<<<gridDim, blockDim>>>(L, N);
-    copyAtoU<<<gridDim,blockDim>>>(N);
 
-    int row_j = 0;
-    int row_counter = 0;
-    kernelresizeA<<<gridDim, blockDim>>>(row_counter, i, row_j,  N);
-    kernelSetPb<<<gridDim, blockDim>>>(N);
-*/
-
-/*
-__global__ void kernelForwardSolve(double *y, double *L, double* Pb, int N){
-    for (int i = 0; i < N; i++){
-        double rhs = Pb[i];
-
-        for (int j=0; j<i; j++){
-          rhs -= L[i*N +j]*y[j];
-        }
-        y[i] = rhs;
-    }
-}
+__global__ void  kernelSequentialSolve(double *A, double *L, double *U, double *P,
+  double *Pb, double *b, double *x, double *y, int N){
 
 
-__global__ void kernelBackwardSolve(double *x, double *U, double* y int N){
-      for (int i=N-1; i>=0; i--){
-        double rhs = y[i];
-
-        for (int j=N-1; j> i; j--){
-          rhs -= U[i*N+j]*x[j];
-        }
-        x[i] = rhs/U[i*N+i];
+  for (int i=0; i<N; i++)
+    for (int j=0; j<N; j++)
+      U[i*N + j] = A[i*N + j];
+  
+  for (int i=0; i<N; i++){
+    for (int j=0; j<N; j++){
+      if (i==j){
+        L[i*N + j] = 1.0;
+        P[i*N + j] = 1.0;
+      } else {
+        L[i*N + j] = 0.0;
+        P[i*N + j] = 0.0;
       }
-}
+    }
+  }
 
-void solve(int N){
+  for (int k=0; k<N-1; k++){
+    int i = -1;
+    double max = -1;
 
-
-    //A, U, L, P, y, x, Pb
-
-    for (int k=0; k<N-1; k++){
-        int i = -1;
-        double max = -1.0;
-
-        for (int row = k; row<N; row++){
-          if (abs(U(row, k)) > max){
-            i = row;
-            max = abs(U(row, k));
-          }
-        }
-
-        kernelRowSwap(U, k, N, k,i, N);
-        kernelRowSwap(L, 0, k, k,i, N);
-        kernelRowSwap(P, 0, N, k,i, N);
-
-        kernelSetLURow(L,U,k,N);
+    for (int row = k; row<N; row++){
+      if (abs(U[row*N + k]) > max){
+        i = row;
+        max = abs(U[row*N+k]);
+      }
     }
 
-    kernelSetPb(Pb, P, N);
-    kernelForwardSolve(y,L,Pb,N);
-    kernelBackwardSolve(x,U,y,N);
+    for (int col=k; col<N; col++){
+        double temp = U[k*N+col];
+        U[k*N+col] = U[i*N+col];
+        U[i*N+col] = temp;
+    }
 
-    //x will now be set to the valid x
+    for (int col=0; col<k; col++){
+        double temp = L[k*N+col];
+        L[k*N+col] = L[i*N+col];
+        L[i*N+col] = temp;
+    }
+
+    for (int col=0; col<N; col++){
+        double temp = P[k*N+col];
+        P[k*N+col] = P[i*N+col];
+        P[i*N+col] = temp;
+    }
+
+    for (int j=k+1; j<N; j++){
+      L[j*N+k] = U[j*N+k]/U[k*N+k];
+      for (int col=k; col<N; col++){
+        U[j*N+col] = U[j*N+col] - L[j*N+k]*U[k*N+col];
+      }
+    }
+  }
+
+  for (int i=0; i<N; i++){
+    x[i] = 0.0;
+    y[i] = 0.0;
+  }
+
+  for (int i=0; i<N; i++){
+    if (P[i*N] == 1.0){
+      Pb[i] = 1.0;
+    } else {
+      Pb[i] = 0.0;
+    }
+  }
+
+  for (int i = 0; i < N; i++){
+    double rhs = Pb[i];
+
+    for (int j=0; j<i; j++){
+      rhs -= L[i*N+j]*y[j];
+    }
+    y[i] = rhs;
+  }
+
+  for (int i=N-1; i>=0; i--){
+    double rhs = y[i];
+
+    for (int j=N-1; j> i; j--){
+      rhs -= U[i*N+j]*x[j];
+    }
+    x[i] = rhs/U[i*N+i];
+  }
 }
+
 
 */
 
