@@ -105,10 +105,16 @@ __global__ void kernelSetb(int N){
     if (i >= N)
         return;
 
-    b[i] = i == 0 ? 1.0 : 0.0;
+    b[i] = (i == 0) ? 1.0 : 0.0;
 }
 
+__global__ void kernelCopyRowA(double* row, int i, int N){
+  int j = blockDim.x*blockIdx.x + threadIdx.x;
+  if (j>= N)
+    return;
 
+  A[i*N + j] = row[j];
+}
 __global__ void  kernelSequentialSolve(int N){
 
 
@@ -273,20 +279,53 @@ std::vector<std::tuple<int, int>> setup(std::vector<std::vector<double>> host_gr
     dim3 gridDim((N + blockDim.x - 1)/blockDim.x,1,1);
 
 
-    cudaMalloc((void**)&A, sizeof(double)*N*N);
+    cudaMalloc((void**)&A, N*N*sizeof(double));
     cudaMalloc((void**)&P, sizeof(double)*N*N);
     cudaMalloc((void**)&L, sizeof(double)*N*N);
     cudaMalloc((void**)&U, sizeof(double)*N*N);
     cudaMalloc((void**)&Pb, sizeof(double)*N);
+    cudaMalloc((void**)&b, N*sizeof(double));
 
-    for(int i=0; i<N; i++){
-      cudaMemcpy(A + i*N*sizeof(double), &host_graph[i], N*sizeof(double), cudaMemcpyHostToDevice); 
+    double *graph_oneD = (double *) calloc(N*N, sizeof(double));
+    for (int i=0; i<N; i++){
+      for (int j=0; j<N; j++){
+        graph_oneD[i*N+j] = host_graph[i][j];
+      }
     }
 
-    kernelSetb<<<gridDim, blockDim>>>(N);
-    cudaThreadSynchronize();
+    cudaMemcpy(A, graph_oneD, N*N*sizeof(double), cudaMemcpyHostToDevice); 
+    free(graph_oneD);
+    /*
+    double* A_host = (double *) calloc(N*N, sizeof(double));
+    cudaMemcpy(A_host, A, N*N*sizeof(double), cudaMemcpyDeviceToHost);
+    for (int i=0; i<N; i++){
+      for (int j=0; j<N; j++){
+        if (A_host[i*N+j]!=host_graph[i][j]){
+          printf("(%d,%d) don't match\n", i,j);
+          printf("A_host: %.3e\n", A_host[i*N+j]);
+          printf("graph: %.3e\n", host_graph[i][j]);
+        }
+      }
+    }*/
 
+    double *b_host = (double *) calloc(N,sizeof(double));
+    b_host[0] = 1.0;
+    cudaMemcpy(b, b_host, N*sizeof(double), cudaMemcpyHostToDevice);
+    free(b_host);
+
+    /*
+    cudaMemcpy(b_host, b, N*sizeof(double), cudaMemcpyDeviceToHost);
+
+    for (int i=0; i<N; i++){
+      double val = (i==0) ? 1.0 : 0.0;
+      if (b_host[i]!=val){
+          printf("(%d) doesn't match\n", i);
+          printf("b_host: %.3e\n", b_host[i]);
+          printf("val: %.3e\n", val);
+      }
+    }*/
     return matching(host_graph, N, err);  
+    //return std::vector<std::tuple<int, int>>();
 }
 
 /*
