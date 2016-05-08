@@ -191,7 +191,7 @@ std::vector<std::tuple<int, int>> Molecule::CUDAMatching(){
   printf("Error in mol.cpp: %.3e\n", err);
   std::vector<std::tuple<int, int>> M = setup(cudaGraph, graph, n, err);
   printMatching(M);
-  return std::vector<tuple<int,int>>();
+  return M;
 }
 
 std::vector<std::tuple<int, int>> Molecule::matching(){
@@ -267,7 +267,6 @@ std::vector<std::tuple<int, int>> Molecule::matching(){
       rc_map.erase(rc_map.begin() + row_j);
       rc_map.erase(rc_map.begin());
   }
-  printMatching(M);
   return M;
 }
 
@@ -282,14 +281,17 @@ void Molecule::addMatchedBonds(std::vector<std::tuple<int, int>> M){
         matchingMap.insert(std::pair<int,int>(a,b));
     }
 
+
     for(int j=0; j<_bonds.size(); j++){
 
         int id_first = getfirst(j);
         int id_second= getsecond(j);
 
         int min = std::min(id_first,id_second);
+        int max = std::max(id_first, id_second);
 
-        if (matchingMap.count(min)==1){
+        if (matchingMap.count(min)==1 &&
+            matchingMap[min]==max){
             update(j);
         }
     }

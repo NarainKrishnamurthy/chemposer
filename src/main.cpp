@@ -59,41 +59,11 @@ int main (int argc, char *argv[])
 
     printf("\n\nTime taken by perceive bonds= %f\n\n", elapsed_secs);
 
-   // printf(" \n\n Augmented Matrix before taking the inverse \n\n");
-
-    //mol.printAugMatrix();
-
     cout << "Molecule has " << mol.numberOfAtoms() << " atoms and " << mol.numberOfBonds() << " bonds." << endl;
 
-    std::map<int, int> excl_cols;
-
-    std::map<int, int> excl_rows;
-
-    float err = 0.000001;
-/*
-    for(int i=0; i<mol.numberOfAtoms(); i++){
-      excl_rows.insert(std::pair<int,int>(i,1));
-      excl_cols.insert(std::pair<int,int>(i,1));
-
-    }
-*/
-    //mol.inverse(&excl_cols, &excl_rows, &err);
-
-   // printf(" \n\n Augmented Matrix after taking inverse \n\n");
-
-    //mol.determinant(&err);
-
-    //mol.printDeterminant();
-
-    //mol.printAugMatrix();
-
-    //mol.printGraph();
-
-    //taken from http://stackoverflow.com/questions/2808398/easily-measure-elapsed-time
     begin = clock();
-//    mol.CUDAMatching();
-
-    std::vector<std::tuple<int,int>> M = mol.matching();
+    std::vector<std::tuple<int,int>> M = mol.CUDAMatching();
+    mol.printMatching(M);
     end = clock();
     elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
     /////
@@ -101,17 +71,7 @@ int main (int argc, char *argv[])
     printf("\n\nTime taken by matching function = %f\n\n", elapsed_secs);
 
     mol.addMatchedBonds(M);
-
-    std::vector<Atom*> atoms = mol.atoms();
-    unsigned int j = 0;
-    for (std::vector<Atom*>::iterator i = atoms.begin(); i < atoms.end(); ++i, ++j) {
-      if ((*i)->atomicNum() == 6 && (*i)->numberOfDoubleBonds() != 1) {
-        cout << " failed matching on atom " << j << endl;
-        break;
-      }
-    } // end check loop
-
-    mol.printBonds();
+    mol.checkMatching(M);
 
     // write an SD output
     char *filename = argv[a];
@@ -132,10 +92,10 @@ int main (int argc, char *argv[])
   readConstraints(&constraint_map);
 
   //Printing out all the constraints that were read from the file.
-  for(auto it= constraint_map.begin(); it != constraint_map.end(); ++it){
+  /*for(auto it= constraint_map.begin(); it != constraint_map.end(); ++it){
     printf(" %c : %d \n", it->first, it->second);
 
-  }
+  }*/
 
   return 0;
 }

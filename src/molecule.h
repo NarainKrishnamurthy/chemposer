@@ -13,6 +13,7 @@
 #include "Eigen/Dense"
 
 using namespace Eigen;
+using namespace std;
 
 class Molecule {
  public:
@@ -72,11 +73,36 @@ class Molecule {
     _bonds[i]->setType(2);
  }
 
- void printBonds(){
-     for(auto it= _bonds.begin(); it != _bonds.end(); ++it){
-         printf("%d \n", (*it)->getType());
-     }
- }
+ bool checkMatching(vector<tuple<int, int>> M){
+    int double_count = 0;
+    int single_count = 0;
+
+    for(auto it= _bonds.begin(); it != _bonds.end(); ++it){
+      if ((*it)->getType() == 2){
+        double_count++;
+      } else {
+        single_count++;
+      }
+    }
+    printf("single: %d, double: %d\n", single_count, double_count);
+  
+    vector<int> check_M = vector<int>(numberOfAtoms());
+    for (int i=0; i<M.size(); i++){
+      int a = get<0>(M[i]);
+      int b = get<1>(M[i]);
+      check_M[a]++;
+      check_M[b]++;
+    }
+
+    for (int i=0; i<check_M.size(); i++){
+      if (check_M[i] != 1){
+        printf("MATCHING FAILED\n");
+        return false;
+      }
+    }
+    printf("MATCHING PASSED\n");
+    return true;
+  }
 
 
  protected:
