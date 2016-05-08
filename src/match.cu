@@ -186,11 +186,11 @@ __global__ void  kernelSequentialSolve(double *A, double *L, double *U, double *
   }
 
   for (int i=0; i<N; i++){
-    double sum = 0.0;
-    for (int j=0; j<N;j++){
-      sum += P[i*N+j]*b[j];
+    if (P[i*N] == 1.0){
+      Pb[i] = 1.0;
+    } else {
+      Pb[i] = 0.0;
     }
-    Pb[i] = sum;
   }
 
   for (int i = 0; i < N; i++){
