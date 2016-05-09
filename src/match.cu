@@ -11,7 +11,7 @@
 
 using namespace std;
 
-#define THREADS_PB 256
+#define THREADS_PB 8
 
 __device__ double *A;
 __device__ double *L;
