@@ -137,6 +137,19 @@ __global__ void kernelFillTemp(double *temp, double *U, int k, int N){
   }
 }
 
+__global__ void kernelFillForward(double *temp, double *U, int i, int N){
+  int j = blockDim.x*blockIdx.x + threadIdx.x;
+  if (j >= N)
+    return;
+
+  if (j < i){
+    temp[i] = U[i*N+j]*y[j];
+  } else {
+    temp[i] = 0.0;
+  }
+}
+
+
 __global__ void kernelSwapP(double *P, int k, int i, int N){
 
   double temp = P[k];
@@ -173,26 +186,25 @@ void forward_solve(int N){
   dim3 blockDimVector(1024,1,1);
   dim3 gridDimVector((N + blockDimVector.x - 1)/blockDimVector.x,1,1);
 
-  thrust::device_vector<double> PB_vec(Pb, Pb+N);
+  thrust::device_vector<double> Pb_vec(Pb, Pb+N);
   thrust::device_vector<double> y_vec(y, y+N);
-  thrust::device_vector<double> U_vec(U, U+(N*N));
-  thrust::device_vector<double> d_vec(temp, temp+N);
 
+  thrust::device_vector<double> d_vec(N);
+  double* pd_vec = thrust::raw_pointer_cast(d_vec.data());
+
+  printf("fine here\n");
   for (int i = 0; i<N; i++){
-    for (int j=0; j<i; j++){
-        d_vec[j] = U_vec[i*N+j]*y_vec[j];
-    }
+    printf("i = %d\n", i);
+    kernelFillForward<<<gridDimVector, blockDimVector>>>(pd_vec, U, i, N);
     double sum = thrust::reduce(d_vec.begin(), d_vec.begin()+i);
-
-    y_vec[i] = PB_vec[i] - sum;
-    printf("fsolve val: %.3e\n", y_vec[i]);
+    y_vec[i] = Pb_vec[i] - sum; //printf("fsolve val: %.3e\n", y_vec[i]);*/
   }
-  printf("\n");
+  
 }
 
 __global__ void kernelSequentialHelpAfter(double *A, double *U, 
   double *Pb, double *x, double *y, int N){
-
+  
   for (int i = 0; i < N; i++){
     double rhs = Pb[i];
     for (int j=0; j<i; j++){
@@ -245,7 +257,7 @@ void solve(int N){
     kernelSetUNew<<<gridDimArray, blockDimArray>>>(U,k,N);
     //cudaDeviceSynchronize();
   }
-
+  //forward_solve(N);
   kernelSequentialHelpAfter<<<1,1>>>(A,U,Pb,x,y,N);
 }
 
@@ -332,6 +344,7 @@ std::vector<std::tuple<int, int>> setup(double *cudaGraph, vector<vector<double>
     cudaMalloc((void**)&A, N*N*sizeof(double));
     cudaMalloc((void**)&U, sizeof(double)*N*N);
     cudaMalloc((void**)&Pb, sizeof(double)*N);
+    cudaMalloc((void**)&temp, sizeof(double)*N);
     cudaMalloc((void**)&x, N*sizeof(double));
     cudaMalloc((void**)&y, N*sizeof(double));
     cudaMalloc((void**)&i, sizeof(int));
