@@ -1,9 +1,54 @@
 Notes -
 
-Using GHC 26 - 
+Using GHC 26 - LATEST (scaling is quadratic)
 
-LATEST (scaling is quadratic)
+CUDA
+
+C20.xyz - 0.01
+C24.xyz - 0.02
+C26.xyz - 0.01
+C28.xyz - 0.01
+C30.xyz - 0.01
+C32.xyz - 0.02
+C36.xyz - 0.02
+C50.xyz - 0.05
+C70.xyz - 0.08
+C80.xyz - 0.11
+C180.xyz- 0.67
+C240.xyz- 1.27
+tube-244-  1.31
+C320.xyz- 2.5
+C500.xyz- 7.73
+sheet-648- 16.1
+tueb.980-  55.14
+C720.xyz- 21.95
 1800 - 411 s
 5000 - 54 mins
 
+
+
+
+Sequential -
+
+C20.xyz - 0.00
+C24.xyz - 0.00
+C26.xyz - 0.00
+C28.xyz - 0.00
+C30.xyz - 0.00
+C32.xyz - 0.01
+C36.xyz - 0.01
+C50.xyz - 0.01
+C70.xyz - 0.01
+C80.xyz - 0.01
+C180.xyz- 0.13
+C240.xyz- 0.34
+tube-244- 0.38
+C320.xyz- 1.13
+C500.xyz- 7.84
+sheet-648- 27.58
+tube.980-  146.28
+C720.xyz- 44.93
+
+sheet-1800-
+5000 - 
 
