@@ -187,7 +187,7 @@ __global__ void kernelSequentialHelpAfter(double *A, double *U,
   }
 }
 
-void solve(int N){
+void solve(int N, int *i){
   dim3 blockDimVector(1024,1,1);
   dim3 gridDimVector((N + blockDimVector.x - 1)/blockDimVector.x,1,1);
 
@@ -205,8 +205,7 @@ void solve(int N){
   cudaThreadSynchronize();
 
   for (int k=0; k<N-1; k++){
-    int *i;
-    cudaMalloc((void**)&i, sizeof(int));
+    
     kernelGetMaxUk<<<1, 1>>>(U,k,i,N);
     cudaThreadSynchronize();
     
@@ -219,7 +218,7 @@ void solve(int N){
     cudaThreadSynchronize();
     kernelSetUNew<<<gridDimArray, blockDimArray>>>(U,k,N);
     cudaThreadSynchronize();
-    cudaFree(i);
+    
   }
 
   /*
@@ -244,6 +243,9 @@ void solve(int N){
 
 std::vector<std::tuple<int, int>> matching(double* graph, int n, double err){
 
+  int *i;
+  cudaMalloc((void**)&i, sizeof(int));
+
   int matrix_size = n;
   std::vector<std::tuple<int, int>> M = std::vector<std::tuple<int, int>>();
 
@@ -259,7 +261,7 @@ std::vector<std::tuple<int, int>> matching(double* graph, int n, double err){
   while (M.size() < n/2){
       //kernelSequentialSolve<<<1,1>>>(A,L,U,P,Pb,b,x,y,matrix_size);
       //cudaThreadSynchronize();
-      solve(matrix_size);
+      solve(matrix_size, i);
 
       int row_j = -1;
       cudaMemcpy(host_x, x, matrix_size*sizeof(double), cudaMemcpyDeviceToHost);
