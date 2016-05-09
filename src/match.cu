@@ -81,7 +81,7 @@ __global__ void kernelInitP(double *P, int N){
     if (i >= N)
         return;
 
-    P[i*N] = (i==0) ? 1.0 : 0.0;
+    P[i] = (i==0) ? 1.0 : 0.0;
 }
 
 
@@ -118,7 +118,7 @@ __global__ void kernelSetPb(double *Pb, double *P, int N){
     if (i >= N)
         return;
 
-    if (P[i*N] == 1.0){
+    if (P[i] == 1.0){
         Pb[i] = 1.0;
     } else{
         Pb[i] = 0.0;
@@ -164,9 +164,9 @@ __global__ void kernelGetMaxUk(double *U, int k, int* i, int N){
 
 __global__ void kernelSwapP(double *P, int k, int *i_ptr, int N){
   int i = *i_ptr;
-  double temp = P[k*N];
-  P[k*N] = P[i*N];
-  P[i*N] = temp;
+  double temp = P[k];
+  P[k] = P[i];
+  P[i] = temp;
 }
 __global__ void kernelSequentialHelpAfter(double *A, double *L, double *U, double *P,
   double *Pb, double *b, double *x, double *y, int N){
@@ -213,7 +213,7 @@ void solve(int N){
   kernelInitL<<<gridDimArray, blockDimArray>>>(L,N);
   cudaThreadSynchronize();
 
-  kernelInitP<<<gridDimVector, blockDimVector>>>(P,N);
+  kernelInitP<<<gridDimVector, blockDimVector>>>(Pb,N);
   cudaThreadSynchronize();
 
   for (int k=0; k<N-1; k++){
@@ -225,7 +225,7 @@ void solve(int N){
     
     kernelRowSwap<<<gridDimVector, blockDimVector>>>(U, k, N, k,i, N);
     kernelRowSwap<<<gridDimVector, blockDimVector>>>(L, 0, k, k,i, N);
-    kernelSwapP<<<1,1>>>(P,k,i,N);
+    kernelSwapP<<<1,1>>>(Pb,k,i,N);
     //kernelRowSwap<<<gridDimVector, blockDimVector>>>(P, 0, N, k,i, N);
     cudaThreadSynchronize();
 
@@ -240,8 +240,8 @@ void solve(int N){
   kernelResetxy<<<gridDimVector, blockDimVector>>>(x,y,N);
   cudaThreadSynchronize();
 
-  kernelSetPb<<<gridDimVector, blockDimVector>>>(Pb, P, N);
-  cudaThreadSynchronize();
+  //kernelSetPb<<<gridDimVector, blockDimVector>>>(Pb, P, N);
+  //cudaThreadSynchronize();
 
   /*
   double *temp;
@@ -334,7 +334,7 @@ std::vector<std::tuple<int, int>> setup(double *cudaGraph, vector<vector<double>
     dim3 gridDim((N + blockDim.x - 1)/blockDim.x,1,1);
 
     cudaMalloc((void**)&A, N*N*sizeof(double));
-    cudaMalloc((void**)&P, sizeof(double)*N*N);
+    cudaMalloc((void**)&P, sizeof(double)*N);
     cudaMalloc((void**)&L, sizeof(double)*N*N);
     cudaMalloc((void**)&U, sizeof(double)*N*N);
     cudaMalloc((void**)&Pb, sizeof(double)*N);
