@@ -21,11 +21,13 @@ __device__ double *Pb;
 __device__ double *b;
 __device__ double *x;
 __device__ double *y;
+__device__ int *i;
+__device__ double *temp;
 
 
-__global__ void kernelRowSwap(double *M, int start, int end, int k, int* i_ptr, int N){
+__global__ void kernelRowSwap(double *M, int start, int end, int k, int i, int N){
     
-    int i = *i_ptr;
+   
     int col = blockDim.x*blockIdx.x + threadIdx.x;
 
     if (col < start || col >= end)
@@ -122,19 +124,21 @@ __global__ void kernelresizeA(double *A, int row_counter, int i, int row_j, int 
     }
 }
 
-__global__ void kernelGetMaxUk(double *U, int k, int* i, int N){
-  double max = -1.0;
-  *i = -1;
-  for (int row = k; row<N; row++){
-    if (abs(U[row*N+k]) > max){
-      *i = row;
-      max = abs(U[row*N+k]);
-    }
+__global__ void kernelFillTemp(double *temp, double *U, int k, int N){
+
+  int row = blockDim.x*blockIdx.x + threadIdx.x;
+  if (row >= N)
+    return;
+
+  if (row >= k){
+    temp[row] = abs(U[row*N+k]);
+  } else {
+    temp[row] = 0.0;
   }
 }
 
-__global__ void kernelSwapP(double *P, int k, int *i_ptr, int N){
-  int i = *i_ptr;
+__global__ void kernelSwapP(double *P, int k, int i, int N){
+
   double temp = P[k];
   P[k] = P[i];
   P[i] = temp;
@@ -164,7 +168,27 @@ __global__ void kernelGetLfromU(double *L, double*U, int N){
   }
 }
 
+void forward_solve(int N){
 
+  dim3 blockDimVector(1024,1,1);
+  dim3 gridDimVector((N + blockDimVector.x - 1)/blockDimVector.x,1,1);
+
+  thrust::device_vector<double> PB_vec(Pb, Pb+N);
+  thrust::device_vector<double> y_vec(y, y+N);
+  thrust::device_vector<double> U_vec(U, U+(N*N));
+  thrust::device_vector<double> d_vec(temp, temp+N);
+
+  for (int i = 0; i<N; i++){
+    for (int j=0; j<i; j++){
+        d_vec[j] = U_vec[i*N+j]*y_vec[j];
+    }
+    double sum = thrust::reduce(d_vec.begin(), d_vec.begin()+i);
+
+    y_vec[i] = PB_vec[i] - sum;
+    printf("fsolve val: %.3e\n", y_vec[i]);
+  }
+  printf("\n");
+}
 
 __global__ void kernelSequentialHelpAfter(double *A, double *U, 
   double *Pb, double *x, double *y, int N){
@@ -179,7 +203,6 @@ __global__ void kernelSequentialHelpAfter(double *A, double *U,
 
   for (int i=N-1; i>=0; i--){
     double rhs = y[i];
-
     for (int j=N-1; j> i; j--){
       rhs -= U[i*N+j]*x[j];
     }
@@ -187,7 +210,7 @@ __global__ void kernelSequentialHelpAfter(double *A, double *U,
   }
 }
 
-void solve(int N, int *i){
+void solve(int N){
   dim3 blockDimVector(1024,1,1);
   dim3 gridDimVector((N + blockDimVector.x - 1)/blockDimVector.x,1,1);
 
@@ -201,16 +224,20 @@ void solve(int N, int *i){
 
   kernelcopyAtoU<<<gridDimArray, blockDimArray>>>(A,U,N);
   kernelInitP<<<gridDimVector, blockDimVector>>>(Pb,N);
-
-  cudaThreadSynchronize();
+  //cudaThreadSynchronize();
 
   for (int k=0; k<N-1; k++){
-    
-    kernelGetMaxUk<<<1, 1>>>(U,k,i,N);
+
+    kernelFillTemp<<<gridDimVector, blockDimVector>>>(temp, U, k, N);
     cudaThreadSynchronize();
-    
-    kernelRowSwap<<<gridDimVector, blockDimVector>>>(U, 0, N, k,i, N);
-    kernelSwapP<<<1,1>>>(Pb,k,i,N);
+
+    thrust::device_vector<double> d_vec(temp, temp+N);
+    thrust::device_vector<double>::iterator iter =
+      thrust::max_element(d_vec.begin(), d_vec.end());
+
+    unsigned int position = iter - d_vec.begin();
+    kernelRowSwap<<<gridDimVector, blockDimVector>>>(U, 0, N, k,position, N);
+    kernelSwapP<<<1,1>>>(Pb,k,position,N);
     cudaThreadSynchronize();
 
     //kernelSetLU<<<gridDimVector, blockDimVector>>>(L,U,k,N);
@@ -218,33 +245,12 @@ void solve(int N, int *i){
     cudaThreadSynchronize();
     kernelSetUNew<<<gridDimArray, blockDimArray>>>(U,k,N);
     cudaThreadSynchronize();
-    
   }
 
-  /*
-  double *temp;
-  cudaMalloc((void**)&temp, N*sizeof(double));
-
-  thrust::device_ptr<double> dev_ptr(temp);
-
-  for (int i=0; i<N;i++){
-    kernelForwardMap<<<gridDimVector, blockDimVector>>>(temp, L, y, i,N);
-    cudaThreadSynchronize();
-
-    double result = thrust::reduce(dev_ptr, dev_ptr + i);
-
-    kernelForwardSolve<<<1,1>>>(Pb,y,result,i,N);
-    cudaThreadSynchronize();
-  }
-  cudaFree(temp);*/
   kernelSequentialHelpAfter<<<1,1>>>(A,U,Pb,x,y,N);
-  cudaThreadSynchronize();
 }
 
 std::vector<std::tuple<int, int>> matching(double* graph, int n, double err){
-
-  int *i;
-  cudaMalloc((void**)&i, sizeof(int));
 
   int matrix_size = n;
   std::vector<std::tuple<int, int>> M = std::vector<std::tuple<int, int>>();
@@ -261,7 +267,7 @@ std::vector<std::tuple<int, int>> matching(double* graph, int n, double err){
   while (M.size() < n/2){
       //kernelSequentialSolve<<<1,1>>>(A,L,U,P,Pb,b,x,y,matrix_size);
       //cudaThreadSynchronize();
-      solve(matrix_size, i);
+      solve(matrix_size);
 
       int row_j = -1;
       cudaMemcpy(host_x, x, matrix_size*sizeof(double), cudaMemcpyDeviceToHost);
@@ -329,11 +335,12 @@ std::vector<std::tuple<int, int>> setup(double *cudaGraph, vector<vector<double>
     cudaMalloc((void**)&Pb, sizeof(double)*N);
     cudaMalloc((void**)&x, N*sizeof(double));
     cudaMalloc((void**)&y, N*sizeof(double));
+    cudaMalloc((void**)&i, sizeof(int));
+    cudaMalloc((void**) &temp, N*sizeof(double));
     cudaMemcpy(A, cudaGraph, N*N*sizeof(double), cudaMemcpyHostToDevice);
 
     kernelInitP<<<gridDim, blockDim>>>(Pb, N);
-
-    cudaThreadSynchronize();
+    //cudaThreadSynchronize();
 
     return matching(cudaGraph, N, err);  
 }
