@@ -65,6 +65,26 @@ __global__ void kernelInitLP(double *L, double *P, int N){
     P[i*N+j] = (i==j) ? 1.0 : 0.0;
 }
 
+__global__ void kernelInitL(double *L, int N){
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (i >= N || j >= N)
+        return;
+
+    L[i*N+j] = (i==j) ? 1.0 : 0.0;
+}
+
+__global__ void kernelInitP(double *P, int N){
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (i >= N || j >= N)
+        return;
+
+    P[i*N] = (i==0) ? 1.0 : 0.0;
+}
+
+
 __global__ void kernelcopyAtoU(double *A, double *U, int N){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
@@ -186,7 +206,14 @@ void solve(int N){
   kernelcopyAtoU<<<gridDimArray, blockDimArray>>>(A,U,N);
   cudaThreadSynchronize();
 
+  /*
   kernelInitLP<<<gridDimArray, blockDimArray>>>(L,P,N);
+  cudaThreadSynchronize();*/
+
+  kernelInitL<<<gridDimArray, blockDimArray>>>(L,N);
+  cudaThreadSynchronize();
+
+  kernelInitL<<<gridDimVector, blockDimVector>>>(P,N);
   cudaThreadSynchronize();
 
   for (int k=0; k<N-1; k++){
