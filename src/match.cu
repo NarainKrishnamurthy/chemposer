@@ -224,27 +224,26 @@ void solve(int N){
 
   kernelcopyAtoU<<<gridDimArray, blockDimArray>>>(A,U,N);
   kernelInitP<<<gridDimVector, blockDimVector>>>(Pb,N);
-  //cudaThreadSynchronize();
+  //cudaDeviceSynchronize();
+
+  thrust::device_vector<double> d_vec(N);
+  double* pd_vec = thrust::raw_pointer_cast(d_vec.data());
+  thrust::device_vector<double>::iterator iter;
 
   for (int k=0; k<N-1; k++){
 
-    kernelFillTemp<<<gridDimVector, blockDimVector>>>(temp, U, k, N);
-    cudaThreadSynchronize();
-
-    thrust::device_vector<double> d_vec(temp, temp+N);
-    thrust::device_vector<double>::iterator iter =
-      thrust::max_element(d_vec.begin(), d_vec.end());
-
+    kernelFillTemp<<<gridDimVector, blockDimVector>>>(pd_vec, U, k, N);
+    //cudaDeviceSynchronize();
+    iter = thrust::max_element(d_vec.begin(), d_vec.end());
     unsigned int position = iter - d_vec.begin();
     kernelRowSwap<<<gridDimVector, blockDimVector>>>(U, 0, N, k,position, N);
     kernelSwapP<<<1,1>>>(Pb,k,position,N);
-    cudaThreadSynchronize();
+    //cudaDeviceSynchronize();
 
-    //kernelSetLU<<<gridDimVector, blockDimVector>>>(L,U,k,N);
     kernelSetLNew<<<gridDimVector, blockDimVector>>>(U,k,N);
-    cudaThreadSynchronize();
+    //cudaDeviceSynchronize();
     kernelSetUNew<<<gridDimArray, blockDimArray>>>(U,k,N);
-    cudaThreadSynchronize();
+    //cudaDeviceSynchronize();
   }
 
   kernelSequentialHelpAfter<<<1,1>>>(A,U,Pb,x,y,N);
@@ -266,7 +265,7 @@ std::vector<std::tuple<int, int>> matching(double* graph, int n, double err){
   //double* host_x = (double *) calloc(n, sizeof(double));
   while (M.size() < n/2){
       //kernelSequentialSolve<<<1,1>>>(A,L,U,P,Pb,b,x,y,matrix_size);
-      //cudaThreadSynchronize();
+      //cudaDeviceSynchronize();
       solve(matrix_size);
 
       int row_j = -1;
@@ -302,7 +301,7 @@ std::vector<std::tuple<int, int>> matching(double* graph, int n, double err){
           dim3 gridDim((matrix_size + blockDim.x - 1)/blockDim.x,1,1);
 
           kernelresizeA<<<gridDim, blockDim>>>(A, row_counter, i, row_j, matrix_size);
-          cudaThreadSynchronize();
+          //cudaDeviceSynchronize();
           row_counter++;
         }
       }
@@ -336,11 +335,10 @@ std::vector<std::tuple<int, int>> setup(double *cudaGraph, vector<vector<double>
     cudaMalloc((void**)&x, N*sizeof(double));
     cudaMalloc((void**)&y, N*sizeof(double));
     cudaMalloc((void**)&i, sizeof(int));
-    cudaMalloc((void**) &temp, N*sizeof(double));
     cudaMemcpy(A, cudaGraph, N*N*sizeof(double), cudaMemcpyHostToDevice);
 
     kernelInitP<<<gridDim, blockDim>>>(Pb, N);
-    //cudaThreadSynchronize();
+    //cudaDeviceSynchronize();
 
     return matching(cudaGraph, N, err);  
 }
