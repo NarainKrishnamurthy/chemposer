@@ -72,7 +72,6 @@ int main (int argc, char *argv[])
 
     mol.addMatchedBonds(M);
     mol.checkMatching(M);
-
     // write an SD output
     char *filename = argv[a];
     // change extension
