@@ -168,6 +168,21 @@ __global__ void kernelSwapP(double *P, int k, int *i_ptr, int N){
   P[k] = P[i];
   P[i] = temp;
 }
+
+__global__ void kernelGetLfromA(double *L, double*A, int N){
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
+
+  if (i >= N || j >= N || i < j)
+    return;
+
+  if (i==j){
+    L[i*N+j] = 1.0;
+  } else {
+    L[i*N+j] = A[i*N+j];
+  }
+}
+
 __global__ void kernelSequentialHelpAfter(double *A, double *L, double *U, 
   double *Pb, double *x, double *y, int N){
 
@@ -228,8 +243,7 @@ void solve(int N){
     cudaThreadSynchronize();
   }
 
-  //kernelResetxy<<<gridDimVector, blockDimVector>>>(x,y,N);
-  //cudaThreadSynchronize();
+  
 
   /*
   double *temp;
