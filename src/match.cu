@@ -78,7 +78,7 @@ __global__ void kernelInitL(double *L, int N){
 __global__ void kernelInitP(double *P, int N){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (i >= N || j >= N)
+    if (i >= N)
         return;
 
     P[i*N] = (i==0) ? 1.0 : 0.0;
@@ -213,7 +213,7 @@ void solve(int N){
   kernelInitL<<<gridDimArray, blockDimArray>>>(L,N);
   cudaThreadSynchronize();
 
-  kernelInitL<<<gridDimVector, blockDimVector>>>(P,N);
+  kernelInitP<<<gridDimVector, blockDimVector>>>(P,N);
   cudaThreadSynchronize();
 
   for (int k=0; k<N-1; k++){
