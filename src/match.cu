@@ -168,8 +168,8 @@ __global__ void kernelSwapP(double *P, int k, int *i_ptr, int N){
   P[k] = P[i];
   P[i] = temp;
 }
-__global__ void kernelSequentialHelpAfter(double *A, double *L, double *U, double *P,
-  double *Pb, double *b, double *x, double *y, int N){
+__global__ void kernelSequentialHelpAfter(double *A, double *L, double *U, 
+  double *Pb, double *x, double *y, int N){
 
   for (int i = 0; i < N; i++){
     double rhs = Pb[i];
@@ -191,7 +191,6 @@ __global__ void kernelSequentialHelpAfter(double *A, double *L, double *U, doubl
 
 
 void solve(int N){
-  
   dim3 blockDimVector(1024,1,1);
   dim3 gridDimVector((N + blockDimVector.x - 1)/blockDimVector.x,1,1);
 
@@ -240,9 +239,6 @@ void solve(int N){
   kernelResetxy<<<gridDimVector, blockDimVector>>>(x,y,N);
   cudaThreadSynchronize();
 
-  //kernelSetPb<<<gridDimVector, blockDimVector>>>(Pb, P, N);
-  //cudaThreadSynchronize();
-
   /*
   double *temp;
   cudaMalloc((void**)&temp, N*sizeof(double));
@@ -259,7 +255,7 @@ void solve(int N){
     cudaThreadSynchronize();
   }
   cudaFree(temp);*/
-  kernelSequentialHelpAfter<<<1,1>>>(A,L,U,P,Pb,b,x,y,N);
+  kernelSequentialHelpAfter<<<1,1>>>(A,L,U,Pb,x,y,N);
   cudaThreadSynchronize();
 }
 
@@ -334,11 +330,9 @@ std::vector<std::tuple<int, int>> setup(double *cudaGraph, vector<vector<double>
     dim3 gridDim((N + blockDim.x - 1)/blockDim.x,1,1);
 
     cudaMalloc((void**)&A, N*N*sizeof(double));
-    cudaMalloc((void**)&P, sizeof(double)*N);
     cudaMalloc((void**)&L, sizeof(double)*N*N);
     cudaMalloc((void**)&U, sizeof(double)*N*N);
     cudaMalloc((void**)&Pb, sizeof(double)*N);
-    cudaMalloc((void**)&b, N*sizeof(double));
     cudaMalloc((void**)&x, N*sizeof(double));
     cudaMalloc((void**)&y, N*sizeof(double));
 
