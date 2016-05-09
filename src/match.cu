@@ -203,15 +203,7 @@ void solve(int N){
   gridDimArray.y = (N + blockDimArray.y -1)/ blockDimArray.y;
 
   kernelcopyAtoU<<<gridDimArray, blockDimArray>>>(A,U,N);
-  cudaThreadSynchronize();
-
-  /*
-  kernelInitLP<<<gridDimArray, blockDimArray>>>(L,P,N);
-  cudaThreadSynchronize();*/
-
   kernelInitL<<<gridDimArray, blockDimArray>>>(L,N);
-  cudaThreadSynchronize();
-
   kernelInitP<<<gridDimVector, blockDimVector>>>(Pb,N);
   cudaThreadSynchronize();
 
@@ -236,8 +228,8 @@ void solve(int N){
     cudaThreadSynchronize();
   }
 
-  kernelResetxy<<<gridDimVector, blockDimVector>>>(x,y,N);
-  cudaThreadSynchronize();
+  //kernelResetxy<<<gridDimVector, blockDimVector>>>(x,y,N);
+  //cudaThreadSynchronize();
 
   /*
   double *temp;
@@ -323,6 +315,17 @@ std::vector<std::tuple<int, int>> matching(double* graph, int n, double err){
   return M;
 }
 
+double* init_cudaGraph(int N){
+  double *cudaGraph;
+  cudaMallocHost((void**)&cudaGraph, N*N*sizeof(double));
+  for (int i=0; i<N; i++){
+    for (int j=0; j<N; j++){
+      cudaGraph[i*N+j] = 0.0;
+    }
+  }
+  return cudaGraph;
+}
+
 std::vector<std::tuple<int, int>> setup(double *cudaGraph, vector<vector<double>> host_graph, int N, double err){
     
     printf("error bound is: %.3e\n\n", err);
@@ -335,10 +338,6 @@ std::vector<std::tuple<int, int>> setup(double *cudaGraph, vector<vector<double>
     cudaMalloc((void**)&Pb, sizeof(double)*N);
     cudaMalloc((void**)&x, N*sizeof(double));
     cudaMalloc((void**)&y, N*sizeof(double));
-
-    kernelSetb<<<gridDim, blockDim>>>(b, N);
-    cudaThreadSynchronize();
-
     cudaMemcpy(A, cudaGraph, N*N*sizeof(double), cudaMemcpyHostToDevice);
     return matching(cudaGraph, N, err);  
 }

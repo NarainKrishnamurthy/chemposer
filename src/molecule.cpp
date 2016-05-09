@@ -11,6 +11,7 @@ using namespace std;
 using namespace Eigen;
 
 extern std::vector<std::tuple<int, int>> setup(double *cudaGraph, vector<vector<double>> host_graph, int N, double  err);
+extern double* init_cudaGraph(int N);
 
 bool sortAtomZ(const pair<Atom*,double> &a, const pair<Atom*,double> &b)
 {   return (a.second < b.second); }
@@ -383,7 +384,8 @@ void Molecule::initializeGraph(){
   graph = vector<vector<double>>(N);
 //  cudaMallocHost((void**)cudaGraph,N*N);
 
-  cudaGraph = (double *)calloc(N*N, sizeof(double));
+  //cudaGraph = (double *)calloc(N*N, sizeof(double));
+  cudaGraph = init_cudaGraph(N);
 
   //#pragma parallel for schedule(static)
   for(int i=0; i<N; ++i){
