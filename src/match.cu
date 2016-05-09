@@ -44,6 +44,14 @@ __global__ void kernelSetL(double *L, double *U, int k, int N){
   L[j*N+k] = U[j*N + k]/U[k*N+k];
 }
 
+__global__ void kernelSetLNew(double *U, int k, int N){
+  int j = blockDim.x*blockIdx.x + threadIdx.x;
+  if (j >= N || j<k+1)
+        return;
+
+  U[j*N+k] = U[j*N + k]/U[k*N+k];
+}
+
 __global__ void kernelSetU(double *L, double *U, int k, int N){
     int j = blockDim.x*blockIdx.x + threadIdx.x;
     int col = blockIdx.y * blockDim.y + threadIdx.y;
@@ -54,16 +62,18 @@ __global__ void kernelSetU(double *L, double *U, int k, int N){
     U[j*N + col] -= L[j*N+k]*U[k*N+col];
 }
 
-__global__ void kernelInitLP(double *L, double *P, int N){
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
+__global__ void kernelSetUNew(double *U, int k, int N){
+    int j = blockDim.x*blockIdx.x + threadIdx.x;
+    int col = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if (i >= N || j >= N)
+    if (j >= N || j<k+1 || col >= N || col <k+1)
         return;
 
-    L[i*N+j] = (i==j) ? 1.0 : 0.0;
-    P[i*N+j] = (i==j) ? 1.0 : 0.0;
+    
+    double temp = U[j*N+k]*U[k*N+col];
+    U[j*N + col] -= temp;
 }
+
 
 __global__ void kernelInitL(double *L, int N){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -112,45 +122,6 @@ __global__ void kernelresizeA(double *A, int row_counter, int i, int row_j, int 
     }
 }
 
-
-__global__ void kernelSetPb(double *Pb, double *P, int N){
-    int i = blockDim.x*blockIdx.x + threadIdx.x;
-    if (i >= N)
-        return;
-
-    if (P[i] == 1.0){
-        Pb[i] = 1.0;
-    } else{
-        Pb[i] = 0.0;
-    }
-}
-
-__global__ void kernelSetb(double *b, int N){
-    int i = blockDim.x*blockIdx.x + threadIdx.x;
-    if (i >= N)
-        return;
-
-    b[i] = (i==0) ? 1.0 : 0.0;
-}
-
-__global__ void kernelResetxy(double *x, double *y, int N){
-    int i = blockDim.x*blockIdx.x + threadIdx.x;
-    if (i >= N)
-        return;
-
-    x[i] = 0.0;
-    y[i] = 0.0;
-}
-
-__global__ void kernelScaleA(double *A, int N){
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
-
-    if (i >= N || j >= N)
-        return;
-
-    A[i*N+j] = A[i*N+j];
-}
 __global__ void kernelGetMaxUk(double *U, int k, int* i, int N){
   double max = -1.0;
   *i = -1;
@@ -169,7 +140,17 @@ __global__ void kernelSwapP(double *P, int k, int *i_ptr, int N){
   P[i] = temp;
 }
 
-__global__ void kernelGetLfromA(double *L, double*A, int N){
+__global__ void kernelGetUfromA(double *U, double*A, int N){
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
+
+  if (i >= N || j >= N || i > j)
+    return;
+
+  U[i*N+j] = A[i*N+j];
+}
+
+__global__ void kernelGetLfromU(double *L, double*U, int N){
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -179,17 +160,19 @@ __global__ void kernelGetLfromA(double *L, double*A, int N){
   if (i==j){
     L[i*N+j] = 1.0;
   } else {
-    L[i*N+j] = A[i*N+j];
+    L[i*N+j] = U[i*N+j];
   }
 }
 
-__global__ void kernelSequentialHelpAfter(double *A, double *L, double *U, 
+
+
+__global__ void kernelSequentialHelpAfter(double *A, double *U, 
   double *Pb, double *x, double *y, int N){
 
   for (int i = 0; i < N; i++){
     double rhs = Pb[i];
     for (int j=0; j<i; j++){
-      rhs -= L[i*N+j]*y[j];
+      rhs -= U[i*N+j]*y[j];
     }
     y[i] = rhs;
   }
@@ -204,7 +187,6 @@ __global__ void kernelSequentialHelpAfter(double *A, double *L, double *U,
   }
 }
 
-
 void solve(int N){
   dim3 blockDimVector(1024,1,1);
   dim3 gridDimVector((N + blockDimVector.x - 1)/blockDimVector.x,1,1);
@@ -218,32 +200,27 @@ void solve(int N){
   gridDimArray.y = (N + blockDimArray.y -1)/ blockDimArray.y;
 
   kernelcopyAtoU<<<gridDimArray, blockDimArray>>>(A,U,N);
-  kernelInitL<<<gridDimArray, blockDimArray>>>(L,N);
   kernelInitP<<<gridDimVector, blockDimVector>>>(Pb,N);
+
   cudaThreadSynchronize();
 
   for (int k=0; k<N-1; k++){
     int *i;
     cudaMalloc((void**)&i, sizeof(int));
-
     kernelGetMaxUk<<<1, 1>>>(U,k,i,N);
     cudaThreadSynchronize();
     
-    kernelRowSwap<<<gridDimVector, blockDimVector>>>(U, k, N, k,i, N);
-    kernelRowSwap<<<gridDimVector, blockDimVector>>>(L, 0, k, k,i, N);
+    kernelRowSwap<<<gridDimVector, blockDimVector>>>(U, 0, N, k,i, N);
     kernelSwapP<<<1,1>>>(Pb,k,i,N);
-    //kernelRowSwap<<<gridDimVector, blockDimVector>>>(P, 0, N, k,i, N);
     cudaThreadSynchronize();
 
-    cudaFree(i);
     //kernelSetLU<<<gridDimVector, blockDimVector>>>(L,U,k,N);
-    kernelSetL<<<gridDimVector, blockDimVector>>>(L,U,k,N);
+    kernelSetLNew<<<gridDimVector, blockDimVector>>>(U,k,N);
     cudaThreadSynchronize();
-    kernelSetU<<<gridDimArray, blockDimArray>>>(L,U,k,N);
+    kernelSetUNew<<<gridDimArray, blockDimArray>>>(U,k,N);
     cudaThreadSynchronize();
+    cudaFree(i);
   }
-
-  
 
   /*
   double *temp;
@@ -261,10 +238,9 @@ void solve(int N){
     cudaThreadSynchronize();
   }
   cudaFree(temp);*/
-  kernelSequentialHelpAfter<<<1,1>>>(A,L,U,Pb,x,y,N);
+  kernelSequentialHelpAfter<<<1,1>>>(A,U,Pb,x,y,N);
   cudaThreadSynchronize();
 }
-
 
 std::vector<std::tuple<int, int>> matching(double* graph, int n, double err){
 
@@ -347,12 +323,16 @@ std::vector<std::tuple<int, int>> setup(double *cudaGraph, vector<vector<double>
     dim3 gridDim((N + blockDim.x - 1)/blockDim.x,1,1);
 
     cudaMalloc((void**)&A, N*N*sizeof(double));
-    cudaMalloc((void**)&L, sizeof(double)*N*N);
     cudaMalloc((void**)&U, sizeof(double)*N*N);
     cudaMalloc((void**)&Pb, sizeof(double)*N);
     cudaMalloc((void**)&x, N*sizeof(double));
     cudaMalloc((void**)&y, N*sizeof(double));
     cudaMemcpy(A, cudaGraph, N*N*sizeof(double), cudaMemcpyHostToDevice);
+
+    kernelInitP<<<gridDim, blockDim>>>(Pb, N);
+
+    cudaThreadSynchronize();
+
     return matching(cudaGraph, N, err);  
 }
 
